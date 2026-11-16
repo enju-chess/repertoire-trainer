@@ -1028,7 +1028,7 @@ function updForm(rep) {
   return '<form class="stack" id="updform" data-id="' + rep.id + '">' +
     '<p class="note" style="margin:0">今のPGNが入っています。直接書き換えるか、新しいPGNファイルを読み込んでください。学習記録は局面と手で記録しているので、同じ手はそのまま引き継がれます。</p>' +
     '<textarea id="upd-pgn">' + esc(u.pgn) + '</textarea>' +
-    '<div class="row"><span class="btn small filebtn">ファイルから読み込む<input type="file" id="upd-file" accept=".pgn,.txt,text/plain"></span></div>' +
+    '<div class="row"><span class="btn small filebtn">ファイルから読み込む<input type="file" id="upd-file"></span></div>' +
     (u.err ? '<p class="err" style="margin:0">' + esc(u.err) + '</p>' : '') +
     '<div class="row"><button type="submit" class="btn primary small">この内容で更新</button></div></form>';
 }
@@ -1075,7 +1075,7 @@ function repsView() {
     '<div class="field"><label for="imp-name">名前</label><input type="text" id="imp-name" value="' + esc(im.name) + '" placeholder="例：イタリアン（白）"></div>' +
     '<div class="field"><label>自分の色</label><div class="seg" role="group"><button type="button" class="main" data-act="impside" data-s="w" aria-pressed="' + (im.side === 'w') + '">白</button><button type="button" class="main" data-act="impside" data-s="b" aria-pressed="' + (im.side === 'b') + '">黒</button></div></div>' +
     '<div class="field"><label for="imp-pgn">PGN（複数の棋譜をまとめて貼ってもOK）</label><textarea id="imp-pgn" placeholder="1. e4 e5 2. Nf3 Nc6 3. Bc4 (3. Bb5!?) ...">' + esc(im.pgn) + '</textarea></div>' +
-    '<div class="row"><span class="btn small filebtn">ファイルから読み込む<input type="file" id="imp-file" accept=".pgn,.txt,text/plain"></span></div>' +
+    '<div class="row"><span class="btn small filebtn">ファイルから読み込む<input type="file" id="imp-file"></span></div>' +
     '<div class="legend"><span class="chip r-main">本線</span><span>最初の変化（記号なし）、または <code>!</code></span><span class="chip r-alt">別解</span><span><code>!?</code>、または2番目以降の変化（記号なし。要確認として表示）</span><span class="chip r-bad">悪手</span><span><code>?</code> <code>?!</code> <code>??</code> ―― 出題では指したら不正解</span></div>' +
     (im.err ? '<p class="err" style="margin:0">' + esc(im.err) + '</p>' : '') +
     (im.ok ? '<p class="msg ok" style="margin:0">' + esc(im.ok) + '</p>' : '') +
@@ -1199,7 +1199,7 @@ function syncPanel() {
     : 'オフライン版（iPhoneのホーム画面アプリ）との受け渡しに使います。ここで書き出したファイルをオフライン版で読み込むと、レパートリーと学習記録を取り込めます。オフライン版で書き出したファイルをここで読み込むこともできます。';
   return '<section class="form"><h2>記録の受け渡し</h2><p class="note" style="margin:0">' + lead + ' 対象は今選んでいる人（' + esc(who) + '）です。同じ手の記録は、回数の多い方を残してまとめます。</p>' +
     '<div class="row"><button class="btn primary small" data-act="exportfile">ファイルに書き出す</button><button class="btn small" data-act="exportcopy">コピーする</button>' +
-    '<span class="btn small filebtn">ファイルを読み込む<input type="file" id="sync-file" accept=".json,application/json,text/plain"></span></div>' +
+    '<span class="btn small filebtn">ファイルを読み込む<input type="file" id="sync-file"></span></div>' +
     '<details' + (x.paste ? ' open' : '') + '><summary class="note" style="cursor:pointer">コピーした内容を貼り付けて読み込む</summary><div class="stack" style="margin-top:8px"><textarea id="sync-text" placeholder="書き出した内容を貼り付け">' + esc(x.paste || '') + '</textarea><div class="row"><button class="btn small" data-act="importtext">貼り付けた内容を読み込む</button></div></div></details>' +
     (x.err ? '<p class="err" style="margin:0">' + esc(x.err) + '</p>' : '') +
     (x.ok ? '<p class="msg ok" style="margin:0">' + esc(x.ok) + '</p>' : '') + '</section>';
