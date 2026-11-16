@@ -1,0 +1,1417 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>レパートリー練習帳</title>
+<meta name="theme-color" content="#24584A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="練習帳">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>
+/* Layout: one narrow study column (phone-first). Board on top while drilling, score-sheet style move list below. */
+:root {
+  --bg: #EDF0EE;
+  --surface: #FFFFFF;
+  --sunk: #E2E7E4;
+  --ink: #18221E;
+  --muted: #5B6A63;
+  --line: #CFD7D2;
+  --accent: #24584A;
+  --accent-ink: #FFFFFF;
+  --main: #2C6B4D;
+  --main-bg: #DDEEE4;
+  --alt: #94650F;
+  --alt-bg: #F6EBD3;
+  --bad: #B23F2C;
+  --bad-bg: #F7E0DA;
+  --sq-light: #E9D7B9;
+  --sq-dark: #A97E57;
+  --font-display: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-piece: "Noto Sans Symbols 2", "Segoe UI Symbol", "Apple Symbols", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111614; --surface: #1A201D; --sunk: #232A27; --ink: #E6ECE8; --muted: #98A69F; --line: #2E3733;
+    --accent: #7DB8A3; --accent-ink: #0E1512;
+    --main: #74C399; --main-bg: #1F3328; --alt: #E2B055; --alt-bg: #3A2F1A; --bad: #EC7D68; --bad-bg: #3D221D;
+    --sq-light: #D9C4A2; --sq-dark: #94694A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111614; --surface: #1A201D; --sunk: #232A27; --ink: #E6ECE8; --muted: #98A69F; --line: #2E3733;
+  --accent: #7DB8A3; --accent-ink: #0E1512;
+  --main: #74C399; --main-bg: #1F3328; --alt: #E2B055; --alt-bg: #3A2F1A; --bad: #EC7D68; --bad-bg: #3D221D;
+  --sq-light: #D9C4A2; --sq-dark: #94694A;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+#app { max-width: 560px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 48px; display: flex; flex-direction: column; gap: 16px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { font-family: var(--font-display); font-weight: 800; font-size: 21px; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+.brand small { display: block; font-family: var(--font-body); font-weight: 500; font-size: 11px; letter-spacing: .12em; color: var(--muted); }
+.players { display: flex; background: var(--sunk); border-radius: 999px; padding: 3px; }
+.players button { border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; color: var(--muted); }
+.players button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.tabs { display: flex; border-bottom: 1px solid var(--line); gap: 4px; }
+.tabs button { border: 0; background: none; padding: 8px 12px 10px; font-weight: 700; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.notice { font-size: 12.5px; color: var(--muted); background: var(--sunk); border-radius: 8px; padding: 8px 12px; }
+h2 { font-family: var(--font-display); font-weight: 800; font-size: 18px; margin: 0; text-wrap: balance; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; color: var(--muted); }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.rep { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.rep-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.rep-name { font-weight: 700; font-size: 16px; min-width: 0; overflow-wrap: anywhere; }
+.side { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--line); white-space: nowrap; }
+.side.w { background: #FAF7F0; color: #2A241C; }
+.side.b { background: #2A2520; color: #F4EFE6; border-color: #2A2520; }
+.counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.count { background: var(--sunk); border-radius: 8px; padding: 6px 10px; }
+.count b { display: block; font-family: var(--font-mono); font-size: 18px; font-variant-numeric: tabular-nums; }
+.count span { font-size: 11px; color: var(--muted); }
+.count.due b { color: var(--accent); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 14px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.small { padding: 4px 10px; font-size: 12.5px; }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.empty p { margin: 0; color: var(--muted); }
+/* board */
+.board-wrap { position: relative; width: 100%; max-width: 480px; margin: 0 auto; }
+.board { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; aspect-ratio: 1; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.18); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.board { grid-template-rows: repeat(8, 1fr); }
+.sq { position: relative; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 0; padding: 0; margin: 0; background: var(--sq-light); min-width: 0; min-height: 0; aspect-ratio: 1; overflow: hidden; line-height: 0; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+.sq.d { background: var(--sq-dark); }
+.sq.last::before { content: ""; position: absolute; inset: 0; background: rgba(222, 186, 54, .42); }
+.sq.sel::before { content: ""; position: absolute; inset: 0; background: rgba(36, 88, 74, .45); }
+.sq.hint::after { content: ""; position: absolute; inset: 3px; border: 3px solid #1F7A5B; border-radius: 3px; }
+.sq.wrong::before { content: ""; position: absolute; inset: 0; background: rgba(190, 52, 34, .45); }
+.sq.dest::after { content: ""; position: absolute; width: 26%; height: 26%; border-radius: 50%; background: rgba(20, 40, 32, .32); }
+.sq.dest.occ::after { width: 86%; height: 86%; background: transparent; border: 4px solid rgba(20, 40, 32, .32); }
+.pc { position: relative; z-index: 1; display: block; width: 92%; height: 92%; pointer-events: none; overflow: visible; }
+.pc * { stroke-linejoin: round; }
+.pc.w { fill: var(--pw-fill); stroke: var(--pw-stroke); stroke-width: var(--p-sw); }
+.pc.b { fill: var(--pb-fill); stroke: var(--pb-stroke); stroke-width: var(--p-sw); }
+.pc .d { fill: none; stroke-width: 1.7; stroke-linecap: round; }
+.pc .e { stroke: none; }
+.pc.w .d { stroke: var(--pw-det); } .pc.w .e { fill: var(--pw-det); }
+.pc.b .d { stroke: var(--pb-det); } .pc.b .e { fill: var(--pb-det); }
+.ps-classic { --pw-fill: #FAF7F0; --pw-stroke: #2B2117; --pw-det: #2B2117; --pb-fill: #2A221B; --pb-stroke: #120E0B; --pb-det: #E9DFCF; --p-sw: 1.4; }
+.ps-flat { --pw-fill: #F6F3EC; --pw-stroke: #7D705F; --pw-det: #7D705F; --pb-fill: #45403B; --pb-stroke: #2E2A26; --pb-det: #D8D0C4; --p-sw: .8; }
+.ps-bold { --pw-fill: #FFFFFF; --pw-stroke: #000000; --pw-det: #000000; --pb-fill: #0B0B0B; --pb-stroke: #000000; --pb-det: #FFFFFF; --p-sw: 2.2; }
+.bt-wood { --sq-light: #E9D7B9; --sq-dark: #A97E57; }
+.bt-green { --sq-light: #EBECD3; --sq-dark: #6E9257; }
+.bt-blue { --sq-light: #DEE4E8; --sq-dark: #7E98A8; }
+.look { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 150px); gap: 12px 16px; align-items: start; }
+.look .stack { gap: 10px; }
+.look .board-wrap { max-width: 150px; }
+@media (max-width: 420px) { .look { grid-template-columns: 1fr; } .look .board-wrap { max-width: 200px; margin: 0; } }
+.coord { position: absolute; font-size: 9.5px; font-weight: 700; line-height: 1; z-index: 2; pointer-events: none; }
+.coord.f { right: 3px; bottom: 2px; }
+.coord.r { left: 3px; top: 3px; }
+.coord { font-size: clamp(7px, 2.2vw, 10px); }
+.mini .coord { display: none; }
+.sq .coord { color: var(--sq-dark); }
+.sq.d .coord { color: var(--sq-light); }
+.mini { max-width: 280px; margin: 0; }
+.anno { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+/* drill */
+.drill-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.prompt { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.prompt .q { font-weight: 700; font-size: 15px; }
+.target { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 4px; margin-left: 4px; vertical-align: 1px; }
+.msg { border-radius: 8px; padding: 8px 12px; font-size: 14px; }
+.msg.ok { background: var(--main-bg); color: var(--main); }
+.msg.info { background: var(--alt-bg); color: var(--alt); }
+.msg.ng, .msg.bad { background: var(--bad-bg); color: var(--bad); }
+.msg .cm { display: block; color: var(--ink); font-size: 13px; margin-top: 2px; }
+.note { font-size: 13px; color: var(--muted); }
+.moves { font-family: var(--font-mono); font-size: 13.5px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; line-height: 1.9; min-height: 44px; overflow-wrap: anywhere; }
+.moves .num { color: var(--muted); }
+.moves .mine { font-weight: 700; }
+.moves .cur { background: var(--sunk); border-radius: 4px; padding: 0 3px; }
+.cmts { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.cmts ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cmts li { font-size: 13.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.cmts li.now { color: var(--ink); font-weight: 500; }
+.cmts li:not(.now) { color: var(--muted); }
+.cm-move { font-family: var(--font-mono); font-weight: 700; font-size: 12.5px; margin-right: 8px; color: var(--ink); }
+.linkbtn { border: 0; background: none; padding: 0 2px; font-size: 12px; font-weight: 700; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.cmts li.editing { display: flex; flex-direction: column; gap: 6px; }
+.cmts textarea { min-height: 72px; font-family: var(--font-body); font-size: 14px; }
+.btn.marked { background: var(--alt-bg); border-color: var(--alt); color: var(--alt); }
+.medit { gap: 6px; }
+.pos.done { opacity: .62; }
+.tabs { overflow-x: auto; }
+.tabs button { padding-inline: 9px; white-space: nowrap; }
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.score { font-family: var(--font-mono); font-size: 30px; font-variant-numeric: tabular-nums; }
+/* roles */
+.chips { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+.chip { font-weight: 700; padding: 1px 8px; border-radius: 4px; font-size: 12px; }
+.r-main { background: var(--main-bg); color: var(--main); }
+.r-alt { background: var(--alt-bg); color: var(--alt); }
+.r-bad { background: var(--bad-bg); color: var(--bad); }
+.pos { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.pos.flag { border-color: var(--alt); }
+.pos-path { font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }
+.flagtag { font-size: 11px; font-weight: 700; color: var(--alt); }
+.mv { display: grid; grid-template-columns: minmax(64px, auto) 1fr; gap: 6px 10px; align-items: center; }
+.mv-san { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
+.mv-cm { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); margin-top: -4px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; justify-self: start; }
+.seg button { border: 0; background: var(--surface); padding: 5px 12px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"].main { background: var(--main-bg); color: var(--main); }
+.seg button[aria-pressed="true"].alt { background: var(--alt-bg); color: var(--alt); }
+.seg button[aria-pressed="true"].bad { background: var(--bad-bg); color: var(--bad); }
+/* form */
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 12px; font-weight: 700; color: var(--muted); }
+input[type=text], textarea, select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+textarea { font-family: var(--font-mono); font-size: 12.5px; min-height: 140px; resize: vertical; }
+.form { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.legend { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 13px; align-items: center; }
+.legend code { font-family: var(--font-mono); font-size: 13px; }
+.err { color: var(--bad); font-size: 13px; }
+.games summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--muted); }
+.gamelist { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.game { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.game-name { min-width: 0; display: flex; flex-direction: column; font-size: 13px; }
+.game-first { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.filebtn { position: relative; overflow: hidden; }
+.filebtn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head><body>
+<div id="app"><p class="note">読み込み中…</p></div>
+
+<script>
+// ---- minimal chess rules engine ----
+const FILES = 'abcdefgh';
+const sqName = i => FILES[i & 7] + ((i >> 3) + 1);
+const sqIdx = s => (s.charCodeAt(1) - 49) * 8 + (s.charCodeAt(0) - 97);
+const colorOf = p => p ? (p === p.toUpperCase() ? 'w' : 'b') : null;
+const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+function parseFen(fen) {
+  const [placement, turn, castle, ep, half, full] = fen.trim().split(/\s+/);
+  const b = new Array(64).fill(null);
+  const rows = placement.split('/');
+  for (let r = 0; r < 8; r++) {
+    let f = 0;
+    for (const ch of rows[r]) {
+      if (/\d/.test(ch)) f += +ch; else { b[(7 - r) * 8 + f] = ch; f++; }
+    }
+  }
+  return { b, turn: turn || 'w', castle: castle && castle !== '-' ? castle : '', ep: ep && ep !== '-' ? sqIdx(ep) : -1, half: +half || 0, full: +full || 1 };
+}
+function toFen(pos, forKey) {
+  let s = '';
+  for (let r = 7; r >= 0; r--) {
+    let e = 0;
+    for (let f = 0; f < 8; f++) {
+      const p = pos.b[r * 8 + f];
+      if (!p) e++; else { if (e) { s += e; e = 0; } s += p; }
+    }
+    if (e) s += e;
+    if (r) s += '/';
+  }
+  let ep = '-';
+  if (pos.ep >= 0) {
+    // only keep ep when a capture is actually possible (helps transpositions)
+    const pawn = pos.turn === 'w' ? 'P' : 'p';
+    const r = pos.turn === 'w' ? -8 : 8;
+    const f = pos.ep & 7;
+    if ((f > 0 && pos.b[pos.ep + r - 1] === pawn) || (f < 7 && pos.b[pos.ep + r + 1] === pawn)) ep = sqName(pos.ep);
+  }
+  const base = s + ' ' + pos.turn + ' ' + (pos.castle || '-') + ' ' + ep;
+  return forKey ? base : base + ' ' + pos.half + ' ' + pos.full;
+}
+const N_OFF = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]];
+const K_OFF = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+const B_DIR = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+const R_DIR = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+function step(i, df, dr) { const f = (i & 7) + df, r = (i >> 3) + dr; return f < 0 || f > 7 || r < 0 || r > 7 ? -1 : r * 8 + f; }
+
+function attacked(b, sq, by) {
+  const up = by === 'w' ? 1 : -1;
+  const P = by === 'w' ? 'P' : 'p', N = by === 'w' ? 'N' : 'n', K = by === 'w' ? 'K' : 'k';
+  const B = by === 'w' ? 'B' : 'b', R = by === 'w' ? 'R' : 'r', Q = by === 'w' ? 'Q' : 'q';
+  for (const df of [-1, 1]) { const t = step(sq, df, -up); if (t >= 0 && b[t] === P) return true; }
+  for (const [df, dr] of N_OFF) { const t = step(sq, df, dr); if (t >= 0 && b[t] === N) return true; }
+  for (const [df, dr] of K_OFF) { const t = step(sq, df, dr); if (t >= 0 && b[t] === K) return true; }
+  for (const [df, dr] of B_DIR) { let t = sq; for (;;) { t = step(t, df, dr); if (t < 0) break; if (b[t]) { if (b[t] === B || b[t] === Q) return true; break; } } }
+  for (const [df, dr] of R_DIR) { let t = sq; for (;;) { t = step(t, df, dr); if (t < 0) break; if (b[t]) { if (b[t] === R || b[t] === Q) return true; break; } } }
+  return false;
+}
+function kingSq(b, c) { const k = c === 'w' ? 'K' : 'k'; return b.indexOf(k); }
+function inCheck(pos) { const k = kingSq(pos.b, pos.turn); return k >= 0 && attacked(pos.b, k, pos.turn === 'w' ? 'b' : 'w'); }
+
+function pseudoMoves(pos) {
+  const { b, turn } = pos, out = [], opp = turn === 'w' ? 'b' : 'w';
+  for (let i = 0; i < 64; i++) {
+    const p = b[i]; if (!p || colorOf(p) !== turn) continue;
+    const t = p.toLowerCase();
+    if (t === 'p') {
+      const up = turn === 'w' ? 1 : -1, startR = turn === 'w' ? 1 : 6, lastR = turn === 'w' ? 7 : 0;
+      const add = (to, flag) => {
+        if ((to >> 3) === lastR) for (const pr of 'qrbn') out.push({ from: i, to, promo: pr, flag });
+        else out.push({ from: i, to, flag });
+      };
+      const one = step(i, 0, up);
+      if (one >= 0 && !b[one]) {
+        add(one);
+        const two = step(i, 0, 2 * up);
+        if ((i >> 3) === startR && !b[two]) out.push({ from: i, to: two, flag: 'd' });
+      }
+      for (const df of [-1, 1]) {
+        const c = step(i, df, up); if (c < 0) continue;
+        if (b[c] && colorOf(b[c]) === opp) add(c);
+        else if (c === pos.ep) out.push({ from: i, to: c, flag: 'e' });
+      }
+    } else if (t === 'n' || t === 'k') {
+      for (const [df, dr] of (t === 'n' ? N_OFF : K_OFF)) {
+        const to = step(i, df, dr); if (to < 0) continue;
+        if (!b[to] || colorOf(b[to]) === opp) out.push({ from: i, to });
+      }
+      if (t === 'k') {
+        const home = turn === 'w' ? 4 : 60;
+        if (i === home && !attacked(b, i, opp)) {
+          const ks = turn === 'w' ? 'K' : 'k', qs = turn === 'w' ? 'Q' : 'q';
+          if (pos.castle.includes(ks) && !b[i + 1] && !b[i + 2] && !attacked(b, i + 1, opp) && !attacked(b, i + 2, opp)) out.push({ from: i, to: i + 2, flag: 'k' });
+          if (pos.castle.includes(qs) && !b[i - 1] && !b[i - 2] && !b[i - 3] && !attacked(b, i - 1, opp) && !attacked(b, i - 2, opp)) out.push({ from: i, to: i - 2, flag: 'q' });
+        }
+      }
+    } else {
+      const dirs = t === 'b' ? B_DIR : t === 'r' ? R_DIR : B_DIR.concat(R_DIR);
+      for (const [df, dr] of dirs) {
+        let to = i;
+        for (;;) {
+          to = step(to, df, dr); if (to < 0) break;
+          if (!b[to]) out.push({ from: i, to });
+          else { if (colorOf(b[to]) === opp) out.push({ from: i, to }); break; }
+        }
+      }
+    }
+  }
+  return out;
+}
+function makeMove(pos, m) {
+  const b = pos.b.slice(), p = b[m.from], t = p.toLowerCase(), turn = pos.turn;
+  const capture = !!b[m.to] || m.flag === 'e';
+  b[m.to] = m.promo ? (turn === 'w' ? m.promo.toUpperCase() : m.promo) : p;
+  b[m.from] = null;
+  if (m.flag === 'e') b[m.to + (turn === 'w' ? -8 : 8)] = null;
+  if (m.flag === 'k') { b[m.to - 1] = b[m.to + 1]; b[m.to + 1] = null; }
+  if (m.flag === 'q') { b[m.to + 1] = b[m.to - 2]; b[m.to - 2] = null; }
+  let castle = pos.castle;
+  const strip = chars => { for (const c of chars) castle = castle.replace(c, ''); };
+  if (p === 'K') strip('KQ'); if (p === 'k') strip('kq');
+  for (const sq of [m.from, m.to]) {
+    if (sq === 0) strip('Q'); if (sq === 7) strip('K'); if (sq === 56) strip('q'); if (sq === 63) strip('k');
+  }
+  return {
+    b, turn: turn === 'w' ? 'b' : 'w', castle,
+    ep: m.flag === 'd' ? (m.from + m.to) / 2 : -1,
+    half: t === 'p' || capture ? 0 : pos.half + 1,
+    full: turn === 'b' ? pos.full + 1 : pos.full,
+  };
+}
+function legalMoves(pos) {
+  return pseudoMoves(pos).filter(m => {
+    const n = makeMove(pos, m);
+    const k = kingSq(n.b, pos.turn);
+    return !attacked(n.b, k, n.turn);
+  });
+}
+function moveSan(pos, m, legal) {
+  const p = pos.b[m.from], t = p.toLowerCase();
+  let s;
+  if (m.flag === 'k') s = 'O-O';
+  else if (m.flag === 'q') s = 'O-O-O';
+  else {
+    const cap = !!pos.b[m.to] || m.flag === 'e';
+    if (t === 'p') s = (cap ? FILES[m.from & 7] + 'x' : '') + sqName(m.to) + (m.promo ? '=' + m.promo.toUpperCase() : '');
+    else {
+      legal = legal || legalMoves(pos);
+      const others = legal.filter(o => o.to === m.to && o.from !== m.from && pos.b[o.from] === p);
+      let dis = '';
+      if (others.length) {
+        const sameF = others.some(o => (o.from & 7) === (m.from & 7));
+        const sameR = others.some(o => (o.from >> 3) === (m.from >> 3));
+        if (!sameF) dis = FILES[m.from & 7];
+        else if (!sameR) dis = String((m.from >> 3) + 1);
+        else dis = sqName(m.from);
+      }
+      s = t.toUpperCase() + dis + (cap ? 'x' : '') + sqName(m.to);
+    }
+  }
+  const n = makeMove(pos, m);
+  if (inCheck(n)) s += legalMoves(n).length ? '+' : '#';
+  return s;
+}
+const normSan = s => s.replace(/[+#!?]/g, '').replace(/0/g, 'O').replace('=', '').replace(/^P(?=[a-h])/, '');
+function findSan(pos, san) {
+  const want = normSan(san), legal = legalMoves(pos);
+  for (const m of legal) if (normSan(moveSan(pos, m, legal)) === want) return m;
+  // lenient: over-disambiguated like Ngf3 / Ng1f3
+  const mm = want.match(/^([NBRQK])([a-h]?)([1-8]?)x?([a-h][1-8])$/);
+  if (mm) {
+    const c = legal.filter(m => {
+      const p = pos.b[m.from];
+      return p.toUpperCase() === mm[1] && sqName(m.to) === mm[4] && (!mm[2] || FILES[m.from & 7] === mm[2]) && (!mm[3] || String((m.from >> 3) + 1) === mm[3]);
+    });
+    if (c.length === 1) return c[0];
+  }
+  return null;
+}
+// ---- end engine ----
+
+// ---- PGN → repertoire graph ----
+const NAG_OF = { '!': 1, '?': 2, '!!': 3, '??': 4, '!?': 5, '?!': 6 };
+function splitGames(text) {
+  const games = []; let cur = { headers: {}, body: '' }, inMoves = false;
+  for (const line of text.replace(/^﻿/, '').split(/\r?\n/)) {
+    const m = line.match(/^\s*\[(\w+)\s+"(.*)"\]\s*$/);
+    if (m) {
+      if (inMoves) { games.push(cur); cur = { headers: {}, body: '' }; inMoves = false; }
+      cur.headers[m[1]] = m[2];
+    } else { if (line.trim()) inMoves = true; cur.body += line + '\n'; }
+  }
+  if (cur.body.trim()) games.push(cur);
+  return games;
+}
+function parseMovetext(body) {
+  const re = /\{[^}]*\}|;[^\n]*|\(|\)|\$\d+|\d+\.(?:\.\.)?|1-0|0-1|1\/2-1\/2|\*|[!?]{1,2}|--|Z0\b|[KQRBNPOa-h0][^\s(){};$]*|\S/g;
+  const root = []; const stack = [root]; let last = null; const lastStack = [];
+  let m;
+  while ((m = re.exec(body))) {
+    const tk = m[0], seq = stack[stack.length - 1];
+    if (tk === '--' || tk === 'Z0') { const it = { san: '--', isNull: true, nag: 0, comment: '', vars: [] }; seq.push(it); last = it; continue; }
+    if (tk[0] === '{') {
+      const body = tk.slice(1, -1);
+      if (last) {
+        let am; const are = /\[%(cal|csl)\s+([^\]]*)\]/g;
+        while ((am = are.exec(body))) for (const t of am[2].split(',').map(x => x.trim()).filter(Boolean)) {
+          if (am[1] === 'cal' && /^[RGBY][a-h][1-8][a-h][1-8]$/.test(t)) (last.cal = last.cal || []).push({ c: t[0], f: t.slice(1, 3), t: t.slice(3, 5) });
+          if (am[1] === 'csl' && /^[RGBY][a-h][1-8]$/.test(t)) (last.csl = last.csl || []).push({ c: t[0], s: t.slice(1, 3) });
+        }
+      }
+      const c = body.replace(/\[%[^\]]*\]/g, '').replace(/\s+/g, ' ').trim(); if (!c) continue; if (last) last.comment = (last.comment ? last.comment + ' ' : '') + c; else if (stack.length === 1) root.pre = (root.pre ? root.pre + ' ' : '') + c; }
+    else if (tk[0] === ';') { /* skip */ }
+    else if (tk === '(') { if (!last) continue; const v = []; last.vars.push(v); lastStack.push(last); stack.push(v); last = null; }
+    else if (tk === ')') { if (stack.length > 1) { stack.pop(); last = lastStack.pop(); } }
+    else if (tk[0] === '$') { if (last && !last.nag) last.nag = +tk.slice(1); }
+    else if (/^\d+\./.test(tk) || /^(1-0|0-1|1\/2-1\/2|\*)$/.test(tk)) { }
+    else if (/^[!?]{1,2}$/.test(tk)) { if (last && !last.nag) last.nag = NAG_OF[tk] || 0; }
+    else if (/^[KQRBNPOa-h0]/.test(tk)) {
+      const mm = tk.match(/^(.*?)([!?]{1,2})?$/);
+      const it = { san: mm[1], nag: mm[2] ? NAG_OF[mm[2]] || 0 : 0, comment: '', vars: [] };
+      seq.push(it); last = it;
+    }
+  }
+  return root;
+}
+const posKey = pos => toFen(pos, true);
+function buildGraph(pgn) {
+  const nodes = {}, roots = [], errors = []; let curStart = 0, curGame = 0; const gameInfo = [];
+  const ensure = (pos, path) => {
+    const k = posKey(pos);
+    if (!nodes[k]) nodes[k] = { fen: toFen(pos), path, moves: {} };
+    return k;
+  };
+  const walk = (seq, pos, path, firstOrder) => {
+    let cur = pos, p = path, prev = null;
+    for (let i = 0; i < seq.length; i++) {
+      const it = seq[i];
+      if (it.isNull) {
+        // "--" passes a move to show a plan; the rest of this line is a plan, kept as a comment on the last real move
+        const rest = seq.slice(i).filter(x => !x.isNull);
+        const plan = rest.map(x => x.san + (x.comment ? '（' + x.comment + '）' : '')).join(' → ');
+        const extra = (it.comment ? it.comment + ' ' : '') + (plan ? 'プラン：' + plan : '');
+        if (prev && extra && !(prev.comment || '').includes(extra)) prev.comment = (prev.comment ? prev.comment + ' ' : '') + extra;
+        if (prev) for (const x of seq.slice(i)) { if (x.cal && !prev.cal) prev.cal = x.cal; if (x.csl && !prev.csl) prev.csl = x.csl; }
+        return;
+      }
+      it.vars.forEach((v, k) => walk(v, cur, p, k + 1));
+      const mv = findSan(cur, it.san);
+      if (!mv) { errors.push(fmtPath(p.concat([it.san]), curStart)); return; }
+      const legal = legalMoves(cur);
+      const san = moveSan(cur, mv, legal);
+      const fromKey = ensure(cur, p);
+      const next = makeMove(cur, mv);
+      const np = p.concat([san]);
+      const toKey = ensure(next, np);
+      const key = normSan(san);
+      const node = nodes[fromKey];
+      const order = i === 0 ? firstOrder : 0;
+      const ex = node.moves[key];
+      if (!ex) node.moves[key] = { san, to: toKey, order, nag: it.nag, comment: it.comment, games: [curGame], cal: it.cal, csl: it.csl };
+      else {
+        ex.order = Math.min(ex.order, order);
+        if (!ex.games.includes(curGame)) ex.games.push(curGame);
+        if (!ex.nag && it.nag) ex.nag = it.nag;
+        if (!ex.comment && it.comment) ex.comment = it.comment;
+        if (!ex.cal && it.cal) ex.cal = it.cal;
+        if (!ex.csl && it.csl) ex.csl = it.csl;
+      }
+      prev = node.moves[key];
+      cur = next; p = np;
+    }
+  };
+  const games = splitGames(pgn);
+  for (const g of games) {
+    const fen = g.headers.FEN || START_FEN;
+    let pos; try { pos = parseFen(fen); } catch (e) { errors.push('FEN'); continue; }
+    pos.startPly = (pos.full - 1) * 2 + (pos.turn === 'b' ? 1 : 0);
+    curStart = pos.startPly;
+    const rk = ensure(pos, []);
+    nodes[rk].startPly = pos.startPly;
+    if (!roots.includes(rk)) roots.push(rk);
+    const seq = parseMovetext(g.body);
+    curGame = gameInfo.length;
+    const ev = (g.headers.Event || '').trim();
+    gameInfo.push({ name: ev && ev !== '?' ? ev : '', first: fmtPath(seq.slice(0, 6).map(x => x.san), pos.startPly), intro: seq.pre || '' });
+    walk(seq, pos, [], 0);
+  }
+  return { nodes, roots, errors, games: games.length, gameInfo };
+}
+function fmtPath(sans, startPly) {
+  startPly = startPly || 0; let s = '';
+  sans.forEach((san, i) => {
+    const ply = startPly + i, num = Math.floor(ply / 2) + 1;
+    if (ply % 2 === 0) s += (s ? ' ' : '') + num + '.' + san;
+    else s += (i === 0 ? num + '...' : ' ') + san;
+  });
+  return s;
+}
+// role: 'main' | 'alt' | 'bad'
+function defaultRole(mv) {
+  if ([2, 4, 6].includes(mv.nag)) return 'bad';
+  if (mv.nag === 5) return 'alt';
+  if ([1, 3].includes(mv.nag)) return 'main';
+  return mv.order === 0 ? 'main' : 'alt';
+}
+const needsCheck = mv => !mv.nag && mv.order > 0;
+function roleOf(rep, graph, fromKey, key) {
+  const o = rep.roles && rep.roles[fromKey + '|' + key];
+  return o || defaultRole(graph.nodes[fromKey].moves[key]);
+}
+const turnOf = node => node.fen.split(' ')[1];
+function buildLines(rep, graph, cap) {
+  cap = cap || 4000; const out = [];
+  const dfs = (key, steps, seen) => {
+    if (out.length >= cap) return;
+    const node = graph.nodes[key], mine = turnOf(node) === rep.side;
+    let opts = Object.keys(node.moves);
+    if (mine) opts = opts.filter(k => roleOf(rep, graph, key, k) !== 'bad');
+    opts = opts.filter(k => !seen.has(node.moves[k].to));
+    if (!opts.length) { if (steps.some(s => s.mine)) out.push(steps); return; }
+    for (const k of opts) {
+      const to = node.moves[k].to; seen.add(to);
+      dfs(to, steps.concat([{ from: key, key: k, mine }]), seen);
+      seen.delete(to);
+    }
+  };
+  for (const r of graph.roots) dfs(r, [], new Set([r]));
+  return out;
+}
+function problemKeys(lines) {
+  const set = new Set();
+  for (const l of lines) for (const s of l) if (s.mine) set.add(s.from + '|' + s.key);
+  return [...set];
+}
+// my-turn positions that have a choice or a role worth checking
+function choicePositions(rep, graph) {
+  const out = [];
+  for (const [k, n] of Object.entries(graph.nodes)) {
+    if (turnOf(n) !== rep.side) continue;
+    const keys = Object.keys(n.moves);
+    if (!keys.length) continue;
+    const roles = keys.map(x => roleOf(rep, graph, k, x));
+    const flagged = keys.some(x => needsCheck(n.moves[x]) && !(rep.roles && rep.roles[k + '|' + x]));
+    if (keys.length > 1 || roles.includes('bad') || flagged) out.push({ key: k, node: n, flagged });
+  }
+  out.sort((a, b) => a.node.path.length - b.node.path.length);
+  return out;
+}
+// ---- end rep ----
+
+// ---- app ----
+const ROLE = { main: '本線', alt: '別解', bad: '悪手' };
+const PLAYERS = [{ id: 'enju', name: 'Enju' }, { id: 'azumi', name: 'Azumi' }];
+const DAY = 86400000;
+const INTERVALS = [0, 1, 3, 7, 14, 30, 60];
+const PIECE = {"p": "<circle cx=\"22.5\" cy=\"12\" r=\"5.2\"/><path d=\"M17.5 18.6h10l-1.4 2.6c3.2 3 4.9 7.6 5.3 12.3H13.6c.4-4.7 2.1-9.3 5.3-12.3z\"/><rect x=\"11\" y=\"33.5\" width=\"23\" height=\"5.5\" rx=\"1.6\"/>", "r": "<path d=\"M11.5 8.5h4.5v3.5h3.6V8.5h5.8v3.5H29V8.5h4.5v7.5l-3.2 2.6v12.2l3.2 3.2h-21l3.2-3.2V18.6l-3.2-2.6z\"/><rect x=\"9.5\" y=\"33.5\" width=\"26\" height=\"5.5\" rx=\"1.6\"/>", "b": "<circle cx=\"22.5\" cy=\"6.6\" r=\"2.6\"/><path d=\"M22.5 9.4c-5.6 4.3-8.6 9-8.6 13.6 0 3.4 2 5.7 4.6 6.7h8c2.6-1 4.6-3.3 4.6-6.7 0-4.6-3-9.3-8.6-13.6z\"/><path d=\"M16.3 29.7h12.4l2.3 3.8H14z\"/><rect x=\"10.5\" y=\"33.5\" width=\"24\" height=\"5.5\" rx=\"1.6\"/><path class=\"d\" d=\"M25.8 15.2l-5.4 5.6\"/>", "n": "<path d=\"M14.2 33.5c-.4-6.6 2.6-10.6 6.6-13.4-3.4.2-6.3 1.6-8.4 3.9-1.9.6-3.6-.5-3.6-2.6 0-1.4.7-2.4 1.8-3.4l6.9-7.2-.2-4.4 3.3 3.1 1.9-3.3 1.6 4c6.4 1.3 10.9 7 10.9 14.4v8.9z\"/><rect x=\"10\" y=\"33.5\" width=\"25\" height=\"5.5\" rx=\"1.6\"/><circle class=\"e\" cx=\"18.6\" cy=\"14.4\" r=\"1.4\"/>", "q": "<circle cx=\"9.5\" cy=\"12\" r=\"2.3\"/><circle cx=\"16.4\" cy=\"9\" r=\"2.3\"/><circle cx=\"22.5\" cy=\"7.6\" r=\"2.3\"/><circle cx=\"28.6\" cy=\"9\" r=\"2.3\"/><circle cx=\"35.5\" cy=\"12\" r=\"2.3\"/><path d=\"M10 13.6l4.4 15.2h16.2L35 13.6l-6.3 7.4-1.8-10.3-4.4 9.6-4.4-9.6-1.8 10.3z\"/><path d=\"M14.2 28.8h16.6l1.4 4.7H12.8z\"/><rect x=\"10\" y=\"33.5\" width=\"25\" height=\"5.5\" rx=\"1.6\"/>", "k": "<path d=\"M21 3.5h3v3.2h3.2v3H24v3.1h-3V9.7h-3.2v-3H21z\"/><path d=\"M22.5 12.6c-6.4 0-11.6 3.1-11.6 8.3 0 3.3 2 6 3.6 7.9h16c1.6-1.9 3.6-4.6 3.6-7.9 0-5.2-5.2-8.3-11.6-8.3z\"/><path d=\"M14.4 28.8h16.2l1.4 4.7H13z\"/><rect x=\"10\" y=\"33.5\" width=\"25\" height=\"5.5\" rx=\"1.6\"/>"};
+const PIECE_SETS = [['classic', 'クラシック'], ['flat', 'フラット'], ['bold', 'くっきり']];
+const BOARD_SETS = [['wood', '木目'], ['green', 'グリーン'], ['blue', 'ブルー']];
+const SAMPLE_PGN = `[Event "サンプル：イタリアン（白）"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 (3. Bb5!? {スペインも指せるようにしておく別アイデア} a6 4. Ba4 Nf6 5. O-O) 3... Bc5 (3... Nf6 4. d3 Be7 5. O-O O-O 6. Re1) (3... Nd4 {ブラックバーン・シリング・ギャンビット} 4. Nxd4 (4. c3!? {これでも白が良い} Nxf3+ 5. Qxf3) (4. Nxe5? {自然に見えるが罠。4...Qg5で白は崩れる} Qg5 5. Nxf7 Qxg2 6. Rf1 Qxe4+ 7. Be2 Nf3#) 4... exd4 5. O-O) 4. c3 Nf6 5. d3 d6 6. O-O O-O 7. Re1 a6 8. a4 *
+`;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const LS = {
+  get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+};
+
+const S = {
+  player: (LS.get('rt.player') || 'enju'),
+  tab: 'home', reps: [], progress: {}, cache: {}, loading: true,
+  storeMode: 'loading', drill: null, rolesRep: null, onlyFlag: false, openPos: null,
+  imp: { name: '', side: 'w', pgn: '', err: '', ok: '' }, confirmDel: null, notice: '',
+  cedit: null, medit: null, openMark: null, onlyOpen: false,
+  gameSel: LS.get('rt.gamesel') || {}, editRep: null, upd: { pgn: '', err: '', ok: '' },
+  sync: { err: '', ok: '', paste: '' },
+  look: Object.assign({ pieces: 'classic', board: 'wood' }, LS.get('rt.look') || {}),
+};
+let db = null;
+const mem = {};
+
+// ---- storage: shared db when available, else this browser ----
+async function initStore() {
+  if (window.claude && typeof window.claude.use === 'function') {
+    try { db = await window.claude.use('db'); } catch (e) { db = null; }
+  }
+  S.storeMode = db ? 'db' : 'local';
+}
+async function loadReps(p) {
+  if (db) { const s = await db.collection('players/' + p + '/reps').get(); return s.docs.map(d => clone(d.data())); }
+  return LS.get('rt.reps.' + p) || mem['reps.' + p] || [];
+}
+async function putRep(p, rep) {
+  if (db) return db.doc('players/' + p + '/reps/' + rep.id).set(clone(rep));
+  const all = (LS.get('rt.reps.' + p) || mem['reps.' + p] || []).filter(r => r.id !== rep.id).concat([rep]);
+  if (!LS.set('rt.reps.' + p, all)) mem['reps.' + p] = all;
+}
+async function removeRep(p, id) {
+  if (db) { await db.doc('players/' + p + '/reps/' + id).delete(); await db.doc('players/' + p + '/progress/' + id).delete(); return; }
+  const all = (LS.get('rt.reps.' + p) || mem['reps.' + p] || []).filter(r => r.id !== id);
+  if (!LS.set('rt.reps.' + p, all)) mem['reps.' + p] = all;
+  try { localStorage.removeItem('rt.prog.' + p + '.' + id); } catch (e) {}
+}
+async function loadProg(p, id) {
+  if (db) { const s = await db.doc('players/' + p + '/progress/' + id).get(); return s.exists ? clone(s.data().items || {}) : {}; }
+  return LS.get('rt.prog.' + p + '.' + id) || mem['prog.' + p + '.' + id] || {};
+}
+async function putProg(p, id, items) {
+  if (db) return db.doc('players/' + p + '/progress/' + id).set({ items: clone(items) });
+  if (!LS.set('rt.prog.' + p + '.' + id, items)) mem['prog.' + p + '.' + id] = items;
+}
+
+async function loadPlayer() {
+  S.loading = true; render();
+  try {
+    S.reps = await loadReps(S.player);
+    S.reps.sort((a, b) => (a.created || 0) - (b.created || 0));
+    S.progress = {};
+    for (const r of S.reps) S.progress[r.id] = await loadProg(S.player, r.id);
+    S.notice = '';
+  } catch (e) {
+    S.reps = []; S.notice = 'データを読み込めませんでした。ページを開き直してください。（' + (e && e.code || e && e.message || e) + '）';
+  }
+  S.loading = false; render();
+}
+
+function data(rep) {
+  const c = S.cache[rep.id];
+  if (c && c.ver === (rep.updated || 0)) return c;
+  const graph = buildGraph(rep.pgn);
+  graph.gameInfo.forEach(x => { x.id = x.name + '|' + x.first; });
+  // older versions stored per-game settings by position in the file; move them to the game's own id
+  if (rep.startMoves) for (const k of Object.keys(rep.startMoves)) {
+    if (/^\d+$/.test(k) && graph.gameInfo[+k]) { const id = graph.gameInfo[+k].id; if (!rep.startMoves[id]) rep.startMoves[id] = rep.startMoves[k]; delete rep.startMoves[k]; }
+  }
+  const lines = buildLines(rep, graph);
+  const lineGames = lines.map(l => { const st = l[l.length - 1]; return graph.nodes[st.from].moves[st.key].games || [0]; });
+  const probs = quizKeys(rep, graph, lines);
+  const out = { ver: rep.updated || 0, graph, lines, lineGames, probs, byGame: {} };
+  S.cache[rep.id] = out;
+  return out;
+}
+function linesFor(rep, gi) { const d = data(rep); return gi == null ? d.lines : d.lines.filter((l, i) => d.lineGames[i].includes(gi)); }
+function probsFor(rep, gi) {
+  const d = data(rep); if (gi == null) return d.probs;
+  if (!d.byGame[gi]) d.byGame[gi] = quizKeys(rep, d.graph, linesFor(rep, gi));
+  return d.byGame[gi];
+}
+function gameLabel(x) { return x.name ? x.name : x.first; }
+function selGame(rep) {
+  const id = S.gameSel[rep.id]; if (!id) return null;
+  const i = data(rep).graph.gameInfo.findIndex(x => x.id === id);
+  return i >= 0 ? i : null;
+}
+function startMoveOf(rep, gi, graph) {
+  const sm = rep.startMoves || {}, x = graph && graph.gameInfo[gi];
+  return (x && sm[x.id]) || rep.startMove || 1;
+}
+function isQuizStep(rep, st, ply, graph) {
+  if (rep.known && rep.known[st.from + '|' + st.key]) return false;
+  const mv = graph.nodes[st.from].moves[st.key];
+  const th = Math.min(...(mv.games && mv.games.length ? mv.games : [0]).map(gi => startMoveOf(rep, gi, graph)));
+  return Math.floor(ply / 2) + 1 >= th;
+}
+function quizKeys(rep, graph, lines) {
+  const set = new Set();
+  for (const l of lines) {
+    const sp = graph.nodes[l[0].from].startPly || 0;
+    l.forEach((s, i) => { if (s.mine && isQuizStep(rep, s, sp + i, graph)) set.add(s.from + '|' + s.key); });
+  }
+  return [...set];
+}
+function stats(rep, gi) {
+  const probs = probsFor(rep, gi), prog = S.progress[rep.id] || {}, now = Date.now();
+  let learned = 0, due = 0, fresh = 0;
+  for (const k of probs) { const p = prog[k]; if (!p) { fresh++; due++; } else { if (p.box > 0) learned++; if (p.due <= now) due++; } }
+  return { total: probs.length, learned, due, fresh };
+}
+const curRep = id => S.reps.find(r => r.id === id);
+
+// ---- drill ----
+function isDue(rep, st) { const p = (S.progress[rep.id] || {})[st.from + '|' + st.key]; return !p || p.due <= Date.now(); }
+function pickLine(rep, mode, gi) {
+  const { graph } = data(rep), all = linesFor(rep, gi);
+  const qs = l => { const sp = graph.nodes[l[0].from].startPly || 0; return l.filter((s, i) => s.mine && isQuizStep(rep, s, sp + i, graph)); };
+  const lines = all.filter(l => qs(l).length);
+  if (!lines.length) return null;
+  if (mode === 'free') return lines[Math.floor(Math.random() * lines.length)];
+  const prog = S.progress[rep.id] || {}, now = Date.now();
+  let best = Infinity, cands = [];
+  for (const l of lines) {
+    let m = Infinity;
+    for (const s of qs(l)) { const p = prog[s.from + '|' + s.key]; m = Math.min(m, p ? p.due : 0); }
+    if (m > now) continue;
+    // reviews that came due before new material; new items (0) come after learned-due items
+    const score = m === 0 ? now : m;
+    if (score < best) { best = score; cands = [l]; } else if (score === best) cands.push(l);
+  }
+  return cands.length ? cands[Math.floor(Math.random() * cands.length)] : null;
+}
+function startDrill(repId, mode) {
+  const rep = curRep(repId); if (!rep) return;
+  const gi = selGame(rep);
+  const scope = gi == null ? '「' + rep.name + '」' : '「' + gameLabel(data(rep).graph.gameInfo[gi]) + '」';
+  const line = pickLine(rep, mode, gi);
+  if (!line) { S.drill = null; S.tab = 'home'; S.notice = mode === 'review' ? scope + 'は今日の復習がすべて終わっています。自由練習なら全部の変化から出題します。' : scope + 'には出題できる変化がありません。'; render(); return; }
+  const { graph } = data(rep);
+  const root = graph.nodes[line[0].from];
+  S.notice = '';
+  const li = data(rep).lines.indexOf(line), gis = li >= 0 ? data(rep).lineGames[li] : [];
+  const intro = [...new Set(gis.map(i => graph.gameInfo[i] && graph.gameInfo[i].intro).filter(Boolean))].join(' ');
+  S.drill = {
+    intro, repId, mode, gi, line, idx: 0, pos: parseFen(root.fen), startPly: root.startPly || 0,
+    played: [], results: {}, state: 'auto', sel: null, dests: [], last: null, mark: null,
+    msg: null, note: '', wrongHere: false, hinted: false, asked: 0, okCount: 0,
+  };
+  S.tab = 'drill'; S.cedit = null; S.medit = null;
+  render(); advance();
+}
+function cmtOf(rep, from, key) {
+  const k = from + '|' + key;
+  if (rep.comments && Object.prototype.hasOwnProperty.call(rep.comments, k)) return rep.comments[k];
+  const n = data(rep).graph.nodes[from], mv = n && n.moves[key];
+  return mv ? mv.comment || '' : '';
+}
+async function saveRep(rep) {
+  try { await putRep(S.player, rep); } catch (err) { S.notice = '保存できませんでした（' + (err.code || err.message) + '）'; render(); }
+}
+function stepMove(d, st) { return data(curRep(d.repId)).graph.nodes[st.from].moves[st.key]; }
+function playStep(d, st) {
+  const mvInfo = stepMove(d, st);
+  const m = findSan(d.pos, mvInfo.san);
+  d.last = { from: m.from, to: m.to };
+  const rep = curRep(d.repId), cm = cmtOf(rep, st.from, st.key);
+  d.played.push({ cal: mvInfo.cal || null, csl: mvInfo.csl || null, san: mvInfo.san, mine: st.mine, comment: cm, key: st.from + '|' + st.key, fen: toFen(d.pos, true) });
+  d.pos = makeMove(d.pos, m);
+  d.sel = null; d.dests = []; d.mark = null; d.anno = null;
+  d.note = cm;
+}
+function advance() {
+  const d = S.drill; if (!d) return;
+  const rep = curRep(d.repId);
+  if (d.idx >= d.line.length) return finish();
+  const st = d.line[d.idx];
+  const ask = st.mine && isQuizStep(rep, st, d.startPly + d.idx, data(rep).graph) && (d.mode === 'free' || isDue(rep, st));
+  if (ask) { d.begun = true; d.state = 'await'; d.wrongHere = false; d.hinted = false; render(); return; }
+  if (!d.begun) { playStep(d, st); d.idx++; return advance(); }
+  d.state = 'auto'; render();
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setTimeout(() => { if (S.drill !== d) return; playStep(d, st); d.idx++; advance(); }, reduce ? 120 : (st.mine ? 300 : 520));
+}
+function promptInfo(d) {
+  const rep = curRep(d.repId), g = data(rep).graph, st = d.line[d.idx];
+  const node = g.nodes[st.from];
+  const acc = Object.keys(node.moves).filter(k => roleOf(rep, g, st.from, k) !== 'bad');
+  const target = roleOf(rep, g, st.from, st.key);
+  const sameRole = acc.filter(k => roleOf(rep, g, st.from, k) === target).length;
+  return { acc: acc.length, target, sameRole };
+}
+function tryMove(m) {
+  const d = S.drill, rep = curRep(d.repId), g = data(rep).graph, st = d.line[d.idx];
+  const san = moveSan(d.pos, m), k = normSan(san), node = g.nodes[st.from];
+  d.sel = null; d.dests = []; d.lastKey = null;
+  if (k === st.key) {
+    const ok = !d.wrongHere && !d.hinted;
+    d.results[st.from + '|' + st.key] = ok;
+    d.asked++; if (ok) d.okCount++;
+    const info = stepMove(d, st);
+    d.msg = ok ? { kind: 'ok', text: '正解 ' + san + '（' + ROLE[roleOf(rep, g, st.from, st.key)] + '）', cm: '' }
+               : { kind: 'info', text: san + ' を指しました。この手は復習に戻します。', cm: '' };
+    d.lastKey = st.from + '|' + st.key; d.lastSan = san;
+    playStep(d, st); d.idx++;
+    const icm = cmtOf(rep, st.from, st.key); if (icm) d.msg.cm = icm;
+    d.note = '';
+    const an = annoOf(d.played.slice(-2).filter((x, j, a) => j === a.length - 1 || !x.mine));
+    if (an) { d.anno = an; d.state = 'answered'; render(); return; }
+    advance();
+    return;
+  }
+  const t = ROLE[roleOf(rep, g, st.from, st.key)];
+  if (node.moves[k]) {
+    const r = roleOf(rep, g, st.from, k), mv = node.moves[k];
+    if (r === 'bad') {
+      d.wrongHere = true; d.mark = { from: m.from, to: m.to, kind: 'wrong' };
+      d.msg = { kind: 'bad', text: san + ' は悪手（教材）として入れた手です。今回は' + t + 'を指してください。', cm: cmtOf(rep, st.from, k) };
+    } else {
+      d.mark = null;
+      d.msg = { kind: 'info', text: san + ' も' + ROLE[r] + 'として登録済みです。今回は' + t + 'を指してください。', cm: '' };
+    }
+  } else {
+    d.wrongHere = true; d.mark = { from: m.from, to: m.to, kind: 'wrong' };
+    d.msg = { kind: 'ng', text: san + ' はレパートリーにない手です。', cm: '' };
+  }
+  render();
+}
+function showHint(full) {
+  const d = S.drill, st = d.line[d.idx];
+  const m = findSan(d.pos, stepMove(d, st).san);
+  d.hinted = true;
+  d.mark = full ? { from: m.from, to: m.to, kind: 'hint' } : { from: m.from, kind: 'hint' };
+  d.msg = full ? { kind: 'info', text: '答えは ' + stepMove(d, st).san + '。盤上で指して進めてください。', cm: '' } : { kind: 'info', text: '動かす駒を示しました。', cm: '' };
+  render();
+}
+function annoOf(list) {
+  const cal = [], csl = [];
+  for (const p of list) { if (p && p.cal) cal.push(...p.cal); if (p && p.csl) csl.push(...p.csl); }
+  return cal.length || csl.length ? { cal, csl } : null;
+}
+async function finish() {
+  const d = S.drill; d.state = 'done'; d.anno = annoOf(d.played.slice(-1));
+  if (d.mode === 'review' && Object.keys(d.results).length) {
+    const prog = S.progress[d.repId] || (S.progress[d.repId] = {}), now = Date.now();
+    for (const [key, ok] of Object.entries(d.results)) {
+      const p = prog[key] || { box: 0, due: 0, ok: 0, ng: 0 };
+      if (ok) { p.box = Math.min(p.box + 1, INTERVALS.length - 1); p.due = now + INTERVALS[p.box] * DAY; p.ok++; }
+      else { p.box = 0; p.due = now + 10 * 60000; p.ng++; }
+      prog[key] = p;
+    }
+    render();
+    try { await putProg(S.player, d.repId, prog); d.saveErr = ''; } catch (e) { d.saveErr = '結果を保存できませんでした（' + (e.code || e.message || e) + '）'; }
+  }
+  render();
+}
+function onSquare(sq) {
+  const d = S.drill; if (!d || d.state !== 'await') return;
+  const p = d.pos.b[sq];
+  if (d.sel != null) {
+    const cand = legalMoves(d.pos).filter(m => m.from === d.sel && m.to === sq);
+    if (cand.length) {
+      let m = cand[0];
+      if (cand.length > 1) {
+        const want = normSan(stepMove(d, d.line[d.idx]).san);
+        m = cand.find(x => normSan(moveSan(d.pos, x)) === want) || cand.find(x => x.promo === 'q');
+      }
+      return tryMove(m);
+    }
+  }
+  if (p && colorOf(p) === d.pos.turn && d.sel !== sq) {
+    d.sel = sq; d.dests = legalMoves(d.pos).filter(m => m.from === sq).map(m => m.to);
+  } else { d.sel = null; d.dests = []; }
+  render();
+}
+
+// ---- rendering ----
+function boardHTML(pos, o) {
+  o = o || {};
+  const flip = o.flip, out = [];
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const rank = flip ? r : 7 - r, file = flip ? 7 - c : c, i = rank * 8 + file;
+    const cls = ['sq'];
+    if ((rank + file) % 2 === 0) cls.push('d');
+    if (o.last && (o.last.from === i || o.last.to === i)) cls.push('last');
+    if (o.sel === i) cls.push('sel');
+    if (o.mark && (o.mark.from === i || o.mark.to === i)) cls.push(o.mark.kind);
+    if (o.dests && o.dests.includes(i)) cls.push('dest', pos.b[i] ? 'occ' : '');
+    const p = pos.b[i];
+    let inner = p ? '<svg class="pc ' + colorOf(p) + '" viewBox="0 0 45 45" aria-hidden="true">' + PIECE[p.toLowerCase()] + '</svg>' : '';
+    if (r === 7) inner += '<span class="coord f">' + FILES[file] + '</span>';
+    if (c === 0) inner += '<span class="coord r">' + (rank + 1) + '</span>';
+    out.push(o.interactive
+      ? '<button class="' + cls.join(' ') + '" data-act="sq" data-sq="' + i + '" aria-label="' + sqName(i) + (p ? ' ' + p : '') + '">' + inner + '</button>'
+      : '<div class="' + cls.join(' ') + '">' + inner + '</div>');
+  }
+  const anno = o.anno ? annoSVG(o.anno, flip) : '';
+  return '<div class="board-wrap ps-' + S.look.pieces + ' bt-' + S.look.board + (o.mini ? ' mini' : '') + '"><div class="board">' + out.join('') + '</div>' + anno + '</div>';
+}
+function openMarks() { return S.reps.reduce((n, r) => n + Object.values(r.marks || {}).filter(m => !m.done).length, 0); }
+const ANNO_COL = { G: '#15803D', R: '#C2410C', Y: '#CA8A04', B: '#1D4ED8' };
+function annoSVG(a, flip) {
+  const ctr = sq => { const f = sq.charCodeAt(0) - 97, r = +sq[1] - 1; return [(flip ? 7 - f : f) + .5, (flip ? r : 7 - r) + .5]; };
+  let s = '<svg class="anno" viewBox="0 0 8 8" aria-hidden="true"><defs>' +
+    Object.entries(ANNO_COL).map(([k, c]) => '<marker id="ah' + k + '" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="2.6" markerHeight="2.6" orient="auto"><path d="M0 0L10 5L0 10z" fill="' + c + '"/></marker>').join('') + '</defs>';
+  for (const q of a.csl || []) { const [x, y] = ctr(q.s); s += '<circle cx="' + x + '" cy="' + y + '" r=".44" fill="none" stroke="' + (ANNO_COL[q.c] || ANNO_COL.G) + '" stroke-width=".075" opacity=".85"/>'; }
+  for (const q of a.cal || []) {
+    const [x1, y1] = ctr(q.f), [x2, y2] = ctr(q.t), dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+    const ex = x2 - dx / L * .32, ey = y2 - dy / L * .32;
+    s += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + ex + '" y2="' + ey + '" stroke="' + (ANNO_COL[q.c] || ANNO_COL.G) + '" stroke-width=".16" stroke-linecap="round" opacity=".82" marker-end="url(#ah' + (ANNO_COL[q.c] ? q.c : 'G') + ')"/>';
+  }
+  return s + '</svg>';
+}
+function header() {
+  return '<header class="top"><h1 class="brand"><small>OPENING REPERTOIRE</small>レパートリー練習帳</h1>' +
+    '<div class="players" role="group" aria-label="使う人">' +
+    PLAYERS.map(p => '<button data-act="player" data-p="' + p.id + '" aria-pressed="' + (S.player === p.id) + '">' + p.name + '</button>').join('') +
+    '</div></header>' +
+    '<nav class="tabs">' +
+    [['home', '練習'], ['reps', 'レパートリー'], ['roles', '手の役割'], ['marks', '見直し' + (openMarks() ? ' ' + openMarks() : '')]].map(([t, l]) =>
+      '<button data-act="tab" data-t="' + t + '"' + ((S.tab === t || (t === 'home' && S.tab === 'drill')) ? ' aria-current="page"' : '') + '>' + l + '</button>').join('') +
+    '</nav>' +
+    (S.offlineReady === null ? '<p class="notice">オフラインで使う準備をしています。ネットにつながった状態で一度開いたままにしてください。</p>' : '') +
+    (S.updateReady ? '<p class="notice">新しい版があります。<button class="linkbtn" data-act="reload">読み込み直す</button></p>' : '') +
+    (S.notice ? '<p class="notice">' + esc(S.notice) + '</p>' : '');
+}
+function emptyState() {
+  return '<div class="empty"><h2>まだレパートリーがありません</h2>' +
+    '<p>自分のPGNを「レパートリー」タブから登録すると、ここに練習の一覧が出ます。まずはサンプル（イタリアン・白）で動きを試せます。サンプルには別解（3.Bb5!?）と悪手の教材（4.Nxe5?）が入っています。</p>' +
+    '<div class="row"><button class="btn primary" data-act="sample">サンプルを追加</button><button class="btn" data-act="tab" data-t="reps">PGNを登録</button></div></div>';
+}
+const LOOK_POS = parseFen('r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 1');
+function lookPanel() {
+  const seg = (key, sets) => '<div class="seg" role="group">' + sets.map(([v, l]) => '<button class="main" data-act="look" data-k="' + key + '" data-v="' + v + '" aria-pressed="' + (S.look[key] === v) + '">' + l + '</button>').join('') + '</div>';
+  return '<section class="look"><div class="stack"><h2>盤と駒の見た目</h2>' +
+    '<div class="field"><label>駒</label>' + seg('pieces', PIECE_SETS) + '</div>' +
+    '<div class="field"><label>盤</label>' + seg('board', BOARD_SETS) + '</div>' +
+    '<p class="note" style="margin:0">この端末にだけ保存されます。</p></div>' +
+    boardHTML(LOOK_POS, { mini: true }) + '</section>';
+}
+function homeView() {
+  if (!S.reps.length) return emptyState() + lookPanel();
+  return '<section class="stack">' + S.reps.map(rep => {
+    const gi = selGame(rep), st = stats(rep, gi), gs = data(rep).graph.gameInfo;
+    const pick = gs.length > 1 ? '<div class="field"><label for="gs-' + rep.id + '">練習範囲</label><select class="gamesel" id="gs-' + rep.id + '" data-id="' + rep.id + '">' +
+      '<option value="">全ゲームから（復習 ' + stats(rep, null).due + '）</option>' +
+      gs.map((x, i) => '<option value="' + esc(x.id) + '"' + (gi === i ? ' selected' : '') + '>' + esc(gameLabel(x)) + '（復習 ' + stats(rep, i).due + '）</option>').join('') + '</select></div>' : '';
+    return '<article class="rep"><div class="rep-head"><span class="rep-name">' + esc(rep.name) + '</span><span class="side ' + rep.side + '">' + (rep.side === 'w' ? '白番' : '黒番') + '</span></div>' + pick +
+      '<div class="counts"><div class="count due"><b>' + st.due + '</b><span>今日の復習</span></div><div class="count"><b>' + st.learned + '</b><span>覚えた手</span></div><div class="count"><b>' + st.total + '</b><span>問題数</span></div></div>' +
+      '<div class="row"><button class="btn primary" data-act="drill" data-id="' + rep.id + '" data-m="review"' + (st.due ? '' : ' disabled') + '>復習する</button>' +
+      '<button class="btn" data-act="drill" data-id="' + rep.id + '" data-m="free">自由練習</button></div></article>';
+  }).join('') + '</section>' + lookPanel();
+}
+function plyLabel(d, i) { const ply = d.startPly + i; return Math.floor(ply / 2) + 1 + (ply % 2 ? '...' : '.') + d.played[i].san; }
+function commentsHTML(d) {
+  const rep = curRep(d.repId), ce = S.cedit, items = [];
+  if (d.intro) items.push('<li><span class="cm-move">冒頭</span>' + esc(d.intro) + '</li>');
+  d.played.forEach((p, i) => {
+    const editing = ce && ce.i === i;
+    if (!p.comment && !editing) return;
+    const head = '<span class="cm-move">' + esc(plyLabel(d, i)) + '</span>';
+    if (editing) {
+      const [from, key] = p.key.split('|');
+      const n = data(rep).graph.nodes[from], orig = n && n.moves[key] ? n.moves[key].comment || '' : '';
+      const over = rep.comments && Object.prototype.hasOwnProperty.call(rep.comments, p.key);
+      items.push('<li class="editing">' + head + '<textarea id="cedit-text" rows="3" placeholder="この手についてのメモ">' + esc(ce.text) + '</textarea>' +
+        '<div class="row"><button class="btn small primary" data-act="csave">保存</button><button class="btn small" data-act="ccancel">やめる</button>' +
+        (over && orig ? '<button class="btn small ghost" data-act="creset">PGNの内容に戻す</button>' : '') + '</div></li>');
+    } else {
+      items.push('<li' + (i === d.played.length - 1 ? ' class="now"' : '') + '>' + head + esc(p.comment) + ' <button class="linkbtn" data-act="cedit" data-i="' + i + '">編集</button></li>');
+    }
+  });
+  const last = d.played.length - 1;
+  const add = last >= 0 && !d.played[last].comment && !(ce && ce.i === last)
+    ? '<button class="btn small ghost" data-act="cedit" data-i="' + last + '">' + esc(plyLabel(d, last)) + ' にコメントを書く</button>' : '';
+  const fk = toFen(d.pos, true), mk = rep.marks && rep.marks[fk];
+  const mark = d.played.length ? '<button class="btn small ' + (mk ? 'marked' : 'ghost') + '" data-act="mark">' + (mk ? '★ 見直しに登録済み' : '☆ 後で見直す') + '</button>' : '';
+  const medit = S.medit && S.medit.repId === rep.id && S.medit.key === fk ? markEditor(rep, fk) : '';
+  if (!items.length && !add && !mark) return '';
+  return '<section class="cmts"><span class="eyebrow">コメント・メモ</span>' + (items.length ? '<ol>' + items.join('') + '</ol>' : '') +
+    '<div class="row">' + add + mark + '</div>' + medit + '</section>';
+}
+function markEditor(rep, key) {
+  const m = rep.marks[key];
+  return '<div class="stack medit"><label class="note" for="medit-text">見直しメモ（本のページ、動画の時間など）</label>' +
+    '<input type="text" id="medit-text" value="' + esc(S.medit.text) + '" placeholder="例：〇〇の本 p.45 / △△の動画 12:30">' +
+    '<div class="row"><button class="btn small primary" data-act="msave">保存</button><button class="btn small" data-act="mclose">閉じる</button>' +
+    '<button class="btn small danger" data-act="mdel" data-id="' + rep.id + '" data-key="' + esc(key) + '">登録を外す</button></div></div>';
+}
+function movesHTML(d) {
+  if (!d.played.length) return '<div class="moves"><span class="num">開始局面</span></div>';
+  let s = '';
+  d.played.forEach((p, i) => {
+    const ply = d.startPly + i, num = Math.floor(ply / 2) + 1;
+    if (ply % 2 === 0) s += '<span class="num">' + num + '.</span>';
+    else if (i === 0) s += '<span class="num">' + num + '...</span>';
+    s += '<span class="' + (p.mine ? 'mine' : '') + (i === d.played.length - 1 ? ' cur' : '') + '">' + esc(p.san) + '</span> ';
+  });
+  return '<div class="moves">' + s + '</div>' + commentsHTML(d);
+}
+function knownBtn(d, rep) {
+  if (!d.lastKey || !d.msg || d.msg.kind !== 'ok') return '';
+  if (rep.known && rep.known[d.lastKey]) return '<p class="note" style="margin:0">' + esc(d.lastSan) + ' は今後出題しません。</p>';
+  return '<div class="row"><button class="btn small ghost" data-act="known">' + esc(d.lastSan) + ' はもう出さない</button></div>';
+}
+function drillView() {
+  const d = S.drill, rep = curRep(d.repId);
+  if (!rep) { S.drill = null; S.tab = 'home'; return homeView(); }
+  let panel = '';
+  if (d.state === 'done') {
+    panel = '<div class="summary"><span class="eyebrow">' + (d.mode === 'review' ? '復習' : '自由練習') + ' ・ 1変化 終了</span>' +
+      '<div class="score">' + d.okCount + ' / ' + d.asked + '</div>' +
+      '<p class="note" style="margin:0">' + (d.mode === 'review' ? (d.asked ? '間違えた手は10分後にもう一度出ます。' : 'この変化は期限前の手だけでした。') : '自由練習は記録に残しません。') + '</p>' +
+      (d.saveErr ? '<p class="err">' + esc(d.saveErr) + '</p>' : '') + knownBtn(d, rep) +
+      '<div class="row"><button class="btn primary" data-act="drill" data-id="' + rep.id + '" data-m="' + d.mode + '">次の変化</button><button class="btn" data-act="quit">一覧に戻る</button></div></div>';
+  } else if (d.state === 'answered') {
+    panel = '<div class="prompt">' +
+      (d.msg ? '<div class="msg ' + d.msg.kind + '">' + esc(d.msg.text) + (d.msg.cm ? '<span class="cm">' + esc(d.msg.cm) + '</span>' : '') + '</div>' : '') +
+      '<p class="note" style="margin:0">盤上の矢印と印は、PGNに書かれたこの局面のプランです。</p>' +
+      knownBtn(d, rep) + '<div class="row"><button class="btn primary" data-act="next">次へ</button></div></div>';
+  } else if (d.state === 'await') {
+    const pi = promptInfo(d);
+    const tag = '<span class="target r-' + pi.target + '">' + ROLE[pi.target] + '</span>';
+    const q = pi.acc > 1
+      ? '候補が' + pi.acc + '手ある局面です。今回は' + tag + (pi.target === 'alt' && pi.sameRole > 1 ? '（' + pi.sameRole + 'つのうちの1つ）' : '') + 'を指してください'
+      : (d.pos.turn === 'w' ? '白' : '黒') + 'の手番です。次の手を指してください';
+    panel = '<div class="prompt"><span class="q">' + q + '</span>' +
+      (d.msg ? '<div class="msg ' + d.msg.kind + '">' + esc(d.msg.text) + (d.msg.cm ? '<span class="cm">' + esc(d.msg.cm) + '</span>' : '') + '</div>' : '') +
+      knownBtn(d, rep) +
+      (d.note ? '<p class="note" style="margin:0">' + esc(d.note) + '</p>' : '') +
+      '<div class="row"><button class="btn small" data-act="hint">ヒント</button><button class="btn small" data-act="answer">答えを見る</button></div></div>';
+  } else {
+    panel = '<div class="prompt"><span class="q note">相手の手を進めています…</span>' +
+      (d.msg ? '<div class="msg ' + d.msg.kind + '">' + esc(d.msg.text) + (d.msg.cm ? '<span class="cm">' + esc(d.msg.cm) + '</span>' : '') + '</div>' : '') + '</div>';
+  }
+  return '<section class="stack"><div class="drill-top"><span class="eyebrow">' + esc(d.gi != null && data(rep).graph.gameInfo[d.gi] ? gameLabel(data(rep).graph.gameInfo[d.gi]) : rep.name) + ' ・ ' + (d.mode === 'review' ? '復習' : '自由練習') + '</span><button class="btn small ghost" data-act="quit">やめる</button></div>' +
+    boardHTML(d.pos, { flip: rep.side === 'b', last: d.last, sel: d.sel, dests: d.dests, mark: d.mark, anno: d.state === 'answered' || d.state === 'done' ? d.anno : null, interactive: true }) +
+    panel + movesHTML(d) + '</section>';
+}
+function moveSelect(rep, gi) {
+  const cur = startMoveOf(rep, gi, data(rep).graph);
+  return '<select class="startmove" id="sm-' + rep.id + '-' + gi + '" data-id="' + rep.id + '" data-g="' + gi + '" style="width:auto">' +
+    Array.from({ length: 25 }, (_, i) => i + 1).map(n => '<option value="' + n + '"' + (cur === n ? ' selected' : '') + '>' + n + '手目から</option>').join('') + '</select>';
+}
+function startMoveUI(rep, g) {
+  const openAttr = S.openGames === rep.id ? ' open' : '';
+  const gs = g.gameInfo || [];
+  if (gs.length <= 1) return '<div class="row"><label class="note" for="sm-' + rep.id + '-0">出題開始</label>' + moveSelect(rep, 0) + '</div>';
+  const custom = gs.filter((_, i) => startMoveOf(rep, i, g) > 1).length;
+  return '<details class="games"' + openAttr + ' data-id="' + rep.id + '"><summary>ゲームごとの出題開始（' + gs.length + 'ゲーム' + (custom ? '・' + custom + '件設定済み' : '') + '）</summary><div class="gamelist">' +
+    gs.map((x, i) => '<div class="game"><div class="game-name">' + (x.name ? '<b>' + esc(x.name) + '</b>' : '') + '<span class="game-first">' + esc(x.first) + '</span></div>' + moveSelect(rep, i) + '</div>').join('') +
+    '</div></details>';
+}
+function updForm(rep) {
+  const u = S.upd;
+  if (S.editRep !== rep.id) return u.ok && u.okId === rep.id ? '<p class="msg ok" style="margin:0">' + esc(u.ok) + '</p>' : '';
+  return '<form class="stack" id="updform" data-id="' + rep.id + '">' +
+    '<p class="note" style="margin:0">今のPGNが入っています。直接書き換えるか、新しいPGNファイルを読み込んでください。学習記録は局面と手で記録しているので、同じ手はそのまま引き継がれます。</p>' +
+    '<textarea id="upd-pgn">' + esc(u.pgn) + '</textarea>' +
+    '<div class="row"><span class="btn small filebtn">ファイルから読み込む<input type="file" id="upd-file" accept=".pgn,.txt,text/plain"></span></div>' +
+    (u.err ? '<p class="err" style="margin:0">' + esc(u.err) + '</p>' : '') +
+    '<div class="row"><button type="submit" class="btn primary small">この内容で更新</button></div></form>';
+}
+function marksView() {
+  const rows = [];
+  for (const rep of S.reps) {
+    const ms = Object.entries(rep.marks || {}).filter(([, m]) => !S.onlyOpen || !m.done).sort((a, b) => b[1].created - a[1].created);
+    if (!ms.length) continue;
+    rows.push('<h2>' + esc(rep.name) + '</h2>');
+    for (const [key, m] of ms) {
+      const editing = S.medit && S.medit.repId === rep.id && S.medit.key === key;
+      const open = S.openMark === rep.id + '|' + key;
+      rows.push('<article class="pos' + (m.done ? ' done' : '') + '"><div class="pos-path">' + esc(fmtPath(m.path || [], m.startPly || 0) || '開始局面') + '</div>' +
+        (editing ? markEditor(rep, key) : '<p class="' + (m.memo ? '' : 'note') + '" style="margin:0">' + esc(m.memo || 'メモなし') + '</p>') +
+        '<p class="note" style="margin:0">' + new Date(m.created).toLocaleDateString('ja-JP') + ' 登録' + (m.done ? ' ・ 見直し済み' : '') + '</p>' +
+        '<div class="row"><button class="btn small" data-act="mdone" data-id="' + rep.id + '" data-key="' + esc(key) + '">' + (m.done ? '未確認に戻す' : '見直した') + '</button>' +
+        (editing ? '' : '<button class="btn small ghost" data-act="mmemo" data-id="' + rep.id + '" data-key="' + esc(key) + '">メモを編集</button>') +
+        '<button class="btn small ghost" data-act="mopen" data-k="' + esc(rep.id + '|' + key) + '">' + (open ? '盤面を閉じる' : '盤面を見る') + '</button></div>' +
+        (open ? boardHTML(parseFen(m.fen + ' 0 1'), { flip: rep.side === 'b', mini: true }) : '') + '</article>');
+    }
+  }
+  const total = S.reps.reduce((n, r) => n + Object.values(r.marks || {}).length, 0);
+  if (!total) return '<div class="empty"><h2>見直しリストは空です</h2><p>練習中に「☆ 後で見直す」を押すと、その局面がここに並びます。本のページや動画の時間をメモしておけます。</p></div>';
+  return '<section class="stack"><div class="row"><button class="btn small' + (S.onlyOpen ? ' primary' : '') + '" data-act="onlyopen">未確認だけ表示</button></div>' +
+    (rows.length ? rows.join('') : '<p class="note">未確認の局面はありません。</p>') + '</section>';
+}
+function repsView() {
+  const im = S.imp;
+  const list = S.reps.map(rep => {
+    const st = stats(rep), g = data(rep).graph;
+    const flags = choicePositions(rep, g).filter(c => c.flagged).length;
+    return '<article class="rep"><div class="rep-head"><span class="rep-name">' + esc(rep.name) + '</span><span class="side ' + rep.side + '">' + (rep.side === 'w' ? '白番' : '黒番') + '</span></div>' +
+      '<p class="note" style="margin:0">問題 ' + st.total + ' ・ 変化 ' + data(rep).lines.length + (flags ? ' ・ <span class="flagtag">役割の要確認 ' + flags + '</span>' : '') + (g.errors.length ? ' ・ 読めなかった手 ' + g.errors.length : '') + '</p>' +
+      (g.errors.length ? '<p class="err" style="margin:0">例: ' + esc(g.errors.slice(0, 2).join(' / ')) + '</p>' : '') +
+      startMoveUI(rep, g) +
+      '<div class="row">' +
+        (rep.known && Object.keys(rep.known).length ? '<span class="note">出さない手 ' + Object.keys(rep.known).length + '</span><button class="btn small ghost" data-act="resetknown" data-id="' + rep.id + '">全部戻す</button>' : '') + '</div>' +
+      updForm(rep) +
+      '<div class="row"><button class="btn small" data-act="editpgn" data-id="' + rep.id + '">' + (S.editRep === rep.id ? '更新をやめる' : 'PGNを更新') + '</button><button class="btn small" data-act="roles" data-id="' + rep.id + '">手の役割を確認</button>' +
+      '<button class="btn small danger" data-act="del" data-id="' + rep.id + '">' + (S.confirmDel === rep.id ? '本当に削除する' : '削除') + '</button></div></article>';
+  }).join('');
+  return '<section class="stack">' + (list || '') +
+    '<form class="form" id="impform"><h2>PGNを登録</h2>' +
+    '<div class="field"><label for="imp-name">名前</label><input type="text" id="imp-name" value="' + esc(im.name) + '" placeholder="例：イタリアン（白）"></div>' +
+    '<div class="field"><label>自分の色</label><div class="seg" role="group"><button type="button" class="main" data-act="impside" data-s="w" aria-pressed="' + (im.side === 'w') + '">白</button><button type="button" class="main" data-act="impside" data-s="b" aria-pressed="' + (im.side === 'b') + '">黒</button></div></div>' +
+    '<div class="field"><label for="imp-pgn">PGN（複数の棋譜をまとめて貼ってもOK）</label><textarea id="imp-pgn" placeholder="1. e4 e5 2. Nf3 Nc6 3. Bc4 (3. Bb5!?) ...">' + esc(im.pgn) + '</textarea></div>' +
+    '<div class="row"><span class="btn small filebtn">ファイルから読み込む<input type="file" id="imp-file" accept=".pgn,.txt,text/plain"></span></div>' +
+    '<div class="legend"><span class="chip r-main">本線</span><span>最初の変化（記号なし）、または <code>!</code></span><span class="chip r-alt">別解</span><span><code>!?</code>、または2番目以降の変化（記号なし。要確認として表示）</span><span class="chip r-bad">悪手</span><span><code>?</code> <code>?!</code> <code>??</code> ―― 出題では指したら不正解</span></div>' +
+    (im.err ? '<p class="err" style="margin:0">' + esc(im.err) + '</p>' : '') +
+    (im.ok ? '<p class="msg ok" style="margin:0">' + esc(im.ok) + '</p>' : '') +
+    '<div class="row"><button type="submit" class="btn primary">登録する</button></div></form>' + syncPanel() + '</section>';
+}
+function rolesView() {
+  if (!S.reps.length) return emptyState();
+  const rep = curRep(S.rolesRep) || S.reps[0];
+  S.rolesRep = rep.id;
+  const g = data(rep).graph;
+  let pos = choicePositions(rep, g);
+  const nFlag = pos.filter(p => p.flagged).length;
+  if (S.onlyFlag) pos = pos.filter(p => p.flagged);
+  const sel = '<div class="field"><label for="roles-rep">レパートリー</label><select id="roles-rep">' +
+    S.reps.map(r => '<option value="' + r.id + '"' + (r.id === rep.id ? ' selected' : '') + '>' + esc(r.name) + '</option>').join('') + '</select></div>';
+  const intro = '<p class="note" style="margin:0">自分の手番で複数の手を用意している局面と、悪手を入れている局面の一覧です。役割を切り替えると出題に反映されます。</p>' +
+    '<div class="row"><button class="btn small' + (S.onlyFlag ? ' primary' : '') + '" data-act="onlyflag">要確認だけ表示（' + nFlag + '）</button></div>';
+  const items = pos.map(({ key, node, flagged }) => {
+    const n = node.path.length, ply = (g.nodes[g.roots[0]].startPly || 0) + n;
+    const next = Math.floor(ply / 2) + 1 + (ply % 2 ? '...' : '.');
+    const pathTxt = (n ? fmtPath(node.path, g.nodes[g.roots[0]].startPly || 0) + ' ' : '') + next + '?';
+    const mvs = Object.entries(node.moves).sort((a, b) => a[1].order - b[1].order).map(([k, mv]) => {
+      const r = roleOf(rep, g, key, k);
+      return '<span class="mv-san">' + esc(mv.san) + '</span><div class="seg" role="group" aria-label="' + esc(mv.san) + 'の役割">' +
+        ['main', 'alt', 'bad'].map(x => '<button class="' + x + '" data-act="role" data-pos="' + esc(key) + '" data-k="' + esc(k) + '" data-r="' + x + '" aria-pressed="' + (r === x) + '">' + ROLE[x] + '</button>').join('') + '</div>' +
+        (cmtOf(rep, key, k) ? '<span class="mv-cm">' + esc(cmtOf(rep, key, k)) + '</span>' : '');
+    }).join('');
+    const open = S.openPos === key;
+    return '<article class="pos' + (flagged ? ' flag' : '') + '"><div class="pos-path">' + esc(pathTxt) + '</div>' +
+      (flagged ? '<span class="flagtag">要確認：記号なしの2番目以降の変化を別解にしています</span>' : '') +
+      '<div class="mv">' + mvs + '</div>' +
+      '<div class="row"><button class="btn small ghost" data-act="openpos" data-pos="' + esc(key) + '">' + (open ? '盤面を閉じる' : '盤面を見る') + '</button></div>' +
+      (open ? boardHTML(parseFen(node.fen), { flip: rep.side === 'b', mini: true }) : '') + '</article>';
+  }).join('');
+  return '<section class="stack">' + sel + intro + (items || '<p class="note">対象の局面はありません。</p>') + '</section>';
+}
+function render() {
+  const app = document.getElementById('app');
+  let body;
+  if (S.loading) body = '<p class="note">読み込み中…</p>';
+  else if (S.tab === 'drill' && S.drill) body = drillView();
+  else if (S.tab === 'reps') body = repsView();
+  else if (S.tab === 'roles') body = rolesView();
+  else if (S.tab === 'marks') body = marksView();
+  else body = homeView();
+  const y = window.scrollY;
+  app.innerHTML = header() + body;
+  window.scrollTo(0, y);
+}
+
+
+// ---- moving records between the shared and offline versions ----
+const IS_OFFLINE_APP = true;
+function exportData() {
+  return {
+    app: 'repertoire-trainer', format: 1, from: IS_OFFLINE_APP ? 'offline' : 'shared',
+    player: S.player, exported: Date.now(),
+    reps: S.reps.map(r => clone(r)), progress: clone(S.progress),
+  };
+}
+function mergeProg(a, b) {
+  const out = Object.assign({}, a || {});
+  for (const [k, p] of Object.entries(b || {})) {
+    const q = out[k];
+    if (!q) { out[k] = p; continue; }
+    const np = (p.ok || 0) + (p.ng || 0), nq = (q.ok || 0) + (q.ng || 0);
+    if (np > nq || (np === nq && (p.due || 0) > (q.due || 0))) out[k] = p;
+  }
+  return out;
+}
+async function importData(obj) {
+  if (!obj || obj.app !== 'repertoire-trainer' || !Array.isArray(obj.reps)) throw new Error('練習帳から書き出したデータではありません。');
+  let added = 0, merged = 0;
+  for (const r of obj.reps) {
+    if (!r || !r.id || typeof r.pgn !== 'string') continue;
+    const cur = curRep(r.id);
+    let next;
+    if (!cur) { next = clone(r); added++; }
+    else {
+      const [older, newer] = (r.updated || 0) > (cur.updated || 0) ? [cur, r] : [r, cur];
+      next = clone(newer);
+      for (const f of ['roles', 'known', 'comments', 'marks', 'startMoves']) next[f] = Object.assign({}, older[f] || {}, newer[f] || {});
+      merged++;
+    }
+    next.updated = Date.now();
+    const prog = mergeProg(S.progress[r.id], (obj.progress || {})[r.id]);
+    await putRep(S.player, next);
+    await putProg(S.player, next.id, prog);
+    S.reps = S.reps.filter(x => x.id !== next.id).concat([next]);
+    S.progress[next.id] = prog; delete S.cache[next.id];
+  }
+  S.reps.sort((a, b) => (a.created || 0) - (b.created || 0));
+  return { added, merged };
+}
+function backupName() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return 'repertoire-' + S.player + '-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+}
+async function saveBackup() {
+  const text = JSON.stringify(exportData()), name = backupName();
+  if (!IS_OFFLINE_APP) {
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if (!dl) throw { code: 'unavailable' };
+    await dl.save({ filename: name, data: text });
+    return 'saved';
+  }
+  const file = new File([text], name, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return 'shared'; }
+    catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  return 'saved';
+}
+function syncPanel() {
+  const x = S.sync;
+  const who = (PLAYERS.find(p => p.id === S.player) || {}).name || S.player;
+  const lead = IS_OFFLINE_APP
+    ? 'この版の記録はこのiPhoneの中にだけあります。共有版（claude.ai）で書き出したファイルを読み込むと、レパートリーと学習記録を取り込めます。逆に、ここで書き出したファイルを共有版で読み込むこともできます。機種変更に備えたバックアップにもなります。'
+    : 'オフライン版（iPhoneのホーム画面アプリ）との受け渡しに使います。ここで書き出したファイルをオフライン版で読み込むと、レパートリーと学習記録を取り込めます。オフライン版で書き出したファイルをここで読み込むこともできます。';
+  return '<section class="form"><h2>記録の受け渡し</h2><p class="note" style="margin:0">' + lead + ' 対象は今選んでいる人（' + esc(who) + '）です。同じ手の記録は、回数の多い方を残してまとめます。</p>' +
+    '<div class="row"><button class="btn primary small" data-act="exportfile">ファイルに書き出す</button><button class="btn small" data-act="exportcopy">コピーする</button>' +
+    '<span class="btn small filebtn">ファイルを読み込む<input type="file" id="sync-file" accept=".json,application/json,text/plain"></span></div>' +
+    '<details' + (x.paste ? ' open' : '') + '><summary class="note" style="cursor:pointer">コピーした内容を貼り付けて読み込む</summary><div class="stack" style="margin-top:8px"><textarea id="sync-text" placeholder="書き出した内容を貼り付け">' + esc(x.paste || '') + '</textarea><div class="row"><button class="btn small" data-act="importtext">貼り付けた内容を読み込む</button></div></div></details>' +
+    (x.err ? '<p class="err" style="margin:0">' + esc(x.err) + '</p>' : '') +
+    (x.ok ? '<p class="msg ok" style="margin:0">' + esc(x.ok) + '</p>' : '') + '</section>';
+}
+async function runImport(text) {
+  const x = S.sync; x.err = ''; x.ok = '';
+  try {
+    const obj = JSON.parse(text);
+    const r = await importData(obj);
+    const from = obj.from === 'offline' ? 'オフライン版' : obj.from === 'shared' ? '共有版' : '';
+    x.ok = (from ? from + 'の' : '') + '記録を取り込みました（' + new Date(obj.exported || Date.now()).toLocaleString('ja-JP') + ' 書き出し）。新しいレパートリー ' + r.added + '、まとめたレパートリー ' + r.merged + '。';
+    x.paste = '';
+  } catch (e) { x.err = e instanceof SyntaxError ? '内容を読み取れませんでした。書き出したファイルかどうか確認してください。' : (e.message || '読み込めませんでした（' + (e.code || e) + '）'); }
+  render();
+}
+
+// ---- actions ----
+async function addRep(name, side, pgn) {
+  const rep = { id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, side, pgn, roles: {}, created: Date.now(), updated: Date.now() };
+  const d = data(rep);
+  if (!d.probs.length) { delete S.cache[rep.id]; throw new Error(d.graph.errors.length ? '手を読み込めませんでした（例: ' + d.graph.errors[0] + '）' : '自分の手番の問題が見つかりません。自分の色を確認してください。'); }
+  await putRep(S.player, rep);
+  S.reps.push(rep); S.progress[rep.id] = {};
+  return rep;
+}
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act;
+  if (a === 'sq') return onSquare(+el.dataset.sq);
+  if (a === 'player') { if (S.player === el.dataset.p) return; S.player = el.dataset.p; LS.set('rt.player', S.player); S.drill = null; S.tab = 'home'; S.cache = {}; S.rolesRep = null; return loadPlayer(); }
+  if (a === 'tab') { S.tab = el.dataset.t; S.notice = ''; S.confirmDel = null; if (S.tab !== 'drill') S.drill = null; render(); window.scrollTo(0, 0); return; }
+  if (a === 'drill') return startDrill(el.dataset.id, el.dataset.m);
+  if (a === 'quit') { S.drill = null; S.tab = 'home'; render(); return; }
+  if (a === 'hint') return showHint(false);
+  if (a === 'next') { const d = S.drill; if (d && d.state === 'answered') { d.anno = null; d.state = 'auto'; advance(); } return; }
+  if (a === 'answer') return showHint(true);
+  if (a === 'sample') {
+    try { await addRep('サンプル：イタリアン（白）', 'w', SAMPLE_PGN); S.notice = ''; } catch (err) { S.notice = '保存できませんでした（' + (err.code || err.message) + '）'; }
+    S.tab = 'home'; render(); return;
+  }
+  if (a === 'impside') { S.imp.side = el.dataset.s; render(); return; }
+  if (a === 'roles') { S.rolesRep = el.dataset.id; S.tab = 'roles'; S.onlyFlag = false; render(); window.scrollTo(0, 0); return; }
+  if (a === 'onlyflag') { S.onlyFlag = !S.onlyFlag; render(); return; }
+  if (a === 'openpos') { S.openPos = S.openPos === el.dataset.pos ? null : el.dataset.pos; render(); return; }
+  if (a === 'del') {
+    const id = el.dataset.id;
+    if (S.confirmDel !== id) { S.confirmDel = id; render(); setTimeout(() => { if (S.confirmDel === id) { S.confirmDel = null; render(); } }, 4000); return; }
+    S.confirmDel = null;
+    try { await removeRep(S.player, id); S.reps = S.reps.filter(r => r.id !== id); delete S.progress[id]; delete S.cache[id]; }
+    catch (err) { S.notice = '削除できませんでした（' + (err.code || err.message) + '）'; }
+    render(); return;
+  }
+  if (a === 'look') { S.look[el.dataset.k] = el.dataset.v; LS.set('rt.look', S.look); render(); return; }
+  if (a === 'cedit') { const d = S.drill, i = +el.dataset.i; S.cedit = { i, text: d.played[i].comment || '' }; render(); const t = document.getElementById('cedit-text'); if (t && t.focus) t.focus(); return; }
+  if (a === 'ccancel') { S.cedit = null; render(); return; }
+  if (a === 'csave' || a === 'creset') {
+    const d = S.drill, rep = d && curRep(d.repId), ce = S.cedit; if (!rep || !ce) return;
+    const p = d.played[ce.i]; rep.comments = rep.comments || {};
+    if (a === 'csave') rep.comments[p.key] = ce.text.trim(); else delete rep.comments[p.key];
+    const [from, key] = p.key.split('|'); p.comment = cmtOf(rep, from, key);
+    S.cedit = null; render(); return saveRep(rep);
+  }
+  if (a === 'mark') {
+    const d = S.drill, rep = d && curRep(d.repId); if (!rep) return;
+    const fk = toFen(d.pos, true); rep.marks = rep.marks || {};
+    if (!rep.marks[fk]) {
+      rep.marks[fk] = { memo: '', path: d.played.map(x => x.san), startPly: d.startPly, fen: fk, created: Date.now(), done: false };
+      saveRep(rep);
+    }
+    S.medit = { repId: rep.id, key: fk, text: rep.marks[fk].memo || '' }; render(); return;
+  }
+  if (a === 'mmemo') { const rep = curRep(el.dataset.id); S.medit = { repId: rep.id, key: el.dataset.key, text: rep.marks[el.dataset.key].memo || '' }; render(); return; }
+  if (a === 'mclose') { S.medit = null; render(); return; }
+  if (a === 'msave') {
+    const me = S.medit, rep = me && curRep(me.repId); if (!rep || !rep.marks[me.key]) return;
+    rep.marks[me.key].memo = me.text.trim(); S.medit = null; render(); return saveRep(rep);
+  }
+  if (a === 'mdel') {
+    const rep = curRep(el.dataset.id); if (!rep || !rep.marks) return;
+    delete rep.marks[el.dataset.key]; S.medit = null; render(); return saveRep(rep);
+  }
+  if (a === 'mdone') { const rep = curRep(el.dataset.id), m = rep.marks[el.dataset.key]; m.done = !m.done; render(); return saveRep(rep); }
+  if (a === 'mopen') { S.openMark = S.openMark === el.dataset.k ? null : el.dataset.k; render(); return; }
+  if (a === 'onlyopen') { S.onlyOpen = !S.onlyOpen; render(); return; }
+  if (a === 'reload') { location.reload(); return; }
+  if (a === 'exportfile') {
+    S.sync.err = ''; S.sync.ok = '';
+    try { const r = await saveBackup(); if (r !== 'cancel') S.sync.ok = '書き出しました。'; }
+    catch (err) { S.sync.err = err && err.code === 'declined' ? '' : 'ファイルに書き出せませんでした。「コピーする」を使ってください。'; }
+    render(); return;
+  }
+  if (a === 'exportcopy') {
+    S.sync.err = ''; S.sync.ok = '';
+    const text = JSON.stringify(exportData());
+    try { await navigator.clipboard.writeText(text); S.sync.ok = 'コピーしました。もう一方の版の「貼り付けて読み込む」に貼り付けてください。'; }
+    catch (err) { S.sync.paste = text; S.sync.err = 'コピーできませんでした。下の欄の内容を全部選択してコピーしてください。'; }
+    render(); return;
+  }
+  if (a === 'importtext') { return runImport(S.sync.paste || ''); }
+  if (a === 'editpgn') {
+    const rep = curRep(el.dataset.id); if (!rep) return;
+    if (S.editRep === rep.id) S.editRep = null; else { S.editRep = rep.id; S.upd = { pgn: rep.pgn, err: '', ok: '' }; }
+    render(); return;
+  }
+  if (a === 'known') {
+    const d = S.drill, rep = d && curRep(d.repId); if (!rep || !d.lastKey) return;
+    rep.known = rep.known || {}; rep.known[d.lastKey] = true; rep.updated = Date.now();
+    render();
+    try { await putRep(S.player, rep); } catch (err) { S.notice = '保存できませんでした（' + (err.code || err.message) + '）'; render(); }
+    return;
+  }
+  if (a === 'resetknown') {
+    const rep = curRep(el.dataset.id); if (!rep) return;
+    rep.known = {}; rep.updated = Date.now(); render();
+    try { await putRep(S.player, rep); } catch (err) { S.notice = '保存できませんでした（' + (err.code || err.message) + '）'; render(); }
+    return;
+  }
+  if (a === 'role') {
+    const rep = curRep(S.rolesRep); if (!rep) return;
+    const k = el.dataset.pos + '|' + el.dataset.k;
+    rep.roles = rep.roles || {};
+    rep.roles[k] = el.dataset.r; rep.updated = Date.now();
+    render();
+    try { await putRep(S.player, rep); } catch (err) { S.notice = '役割を保存できませんでした（' + (err.code || err.message) + '）'; render(); }
+    return;
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'imp-name') S.imp.name = e.target.value;
+  if (e.target.id === 'imp-pgn') S.imp.pgn = e.target.value;
+  if (e.target.id === 'upd-pgn') S.upd.pgn = e.target.value;
+  if (e.target.id === 'sync-text') S.sync.paste = e.target.value;
+  if (e.target.id === 'cedit-text' && S.cedit) S.cedit.text = e.target.value;
+  if (e.target.id === 'medit-text' && S.medit) S.medit.text = e.target.value;
+});
+document.addEventListener('change', e => {
+  if (e.target.classList && e.target.classList.contains('startmove')) {
+    const rep = curRep(e.target.dataset.id); if (!rep) return;
+    const gx = data(rep).graph.gameInfo[+e.target.dataset.g];
+    rep.startMoves = rep.startMoves || {}; rep.startMoves[gx ? gx.id : '0'] = +e.target.value;
+    S.openGames = rep.id; rep.updated = Date.now(); render();
+    putRep(S.player, rep).catch(err => { S.notice = '保存できませんでした（' + (err.code || err.message) + '）'; render(); });
+    return;
+  }
+  if (e.target.classList && e.target.classList.contains('gamesel')) {
+    if (e.target.value) S.gameSel[e.target.dataset.id] = e.target.value; else delete S.gameSel[e.target.dataset.id];
+    LS.set('rt.gamesel', S.gameSel); render(); return;
+  }
+  if (e.target.id === 'sync-file') {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const rd = new FileReader(); rd.onload = () => runImport(String(rd.result)); rd.readAsText(f); return;
+  }
+  if (e.target.id === 'upd-file') {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => { S.upd.pgn = String(rd.result); S.upd.err = ''; render(); };
+    rd.readAsText(f); return;
+  }
+  if (e.target.id === 'roles-rep') { S.rolesRep = e.target.value; S.openPos = null; render(); }
+  if (e.target.id === 'imp-file') {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => { S.imp.pgn = String(rd.result); if (!S.imp.name) S.imp.name = f.name.replace(/\.[^.]+$/, ''); S.imp.err = ''; render(); };
+    rd.readAsText(f);
+  }
+});
+document.addEventListener('submit', async e => {
+  if (e.target.id === 'updform') {
+    e.preventDefault();
+    const rep = curRep(e.target.dataset.id), u = S.upd; if (!rep) return;
+    u.err = '';
+    if (!u.pgn.trim()) { u.err = 'PGNが空です。'; return render(); }
+    if (u.pgn.length > 240000) { u.err = 'PGNが大きすぎます（240KBまで）。'; return render(); }
+    const before = new Set(data(rep).probs), prog = S.progress[rep.id] || {};
+    const trial = Object.assign({}, rep, { pgn: u.pgn, updated: -1 });
+    const nd = data(trial); delete S.cache[rep.id];
+    if (!nd.probs.length) { u.err = nd.graph.errors.length ? '手を読み込めませんでした（例: ' + nd.graph.errors[0] + '）' : '自分の手番の問題が見つかりません。'; return render(); }
+    const old = { pgn: rep.pgn, updated: rep.updated };
+    rep.pgn = u.pgn; rep.updated = Date.now();
+    try { await putRep(S.player, rep); }
+    catch (err) { Object.assign(rep, old); u.err = '保存できませんでした（' + (err.code || err.message) + '）'; return render(); }
+    const after = data(rep).probs;
+    const kept = after.filter(k => prog[k]).length, added = after.filter(k => !before.has(k)).length, gone = [...before].filter(k => !after.includes(k)).length;
+    S.editRep = null; if (S.drill && S.drill.repId === rep.id) S.drill = null;
+    S.upd = { pgn: '', err: '', okId: rep.id, ok: '更新しました。問題 ' + before.size + ' → ' + after.length + '（新しい手 ' + added + '、なくなった手 ' + gone + '）。学習記録のある手 ' + kept + ' はそのまま引き継いでいます。' + (nd.graph.errors.length ? ' 読めなかった手 ' + nd.graph.errors.length + '。' : '') };
+    render(); return;
+  }
+  if (e.target.id !== 'impform') return;
+  e.preventDefault();
+  const im = S.imp; im.err = ''; im.ok = '';
+  if (!im.pgn.trim()) { im.err = 'PGNを貼り付けるか、ファイルを選んでください。'; return render(); }
+  if (im.pgn.length > 240000) { im.err = 'PGNが大きすぎます（240KBまで）。白用・黒用などに分けて登録してください。'; return render(); }
+  try {
+    const rep = await addRep(im.name.trim() || '名前なしのレパートリー', im.side, im.pgn);
+    const d = data(rep), flags = choicePositions(rep, d.graph).filter(c => c.flagged).length;
+    S.imp = { name: '', side: im.side, pgn: '', err: '', ok: '「' + rep.name + '」を登録しました。問題 ' + d.probs.length + (flags ? '、役割の要確認 ' + flags + ' か所' : '') + (d.graph.errors.length ? '、読めなかった手 ' + d.graph.errors.length : '') + '。' };
+  } catch (err) { im.err = err.code ? '保存できませんでした（' + err.code + '）' : err.message; }
+  render();
+});
+
+render();
+initStore().then(loadPlayer);
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+if ('serviceWorker' in navigator) {
+  S.offlineReady = !!navigator.serviceWorker.controller || null;
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    navigator.serviceWorker.ready.then(() => { if (S.offlineReady !== true) { S.offlineReady = true; render(); } });
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing; if (!nw) return;
+      nw.addEventListener('statechange', () => { if (nw.state === 'installed' && navigator.serviceWorker.controller) { S.updateReady = true; render(); } });
+    });
+  }).catch(() => {});
+}
+</script>
+</body></html>
