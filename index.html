@@ -969,10 +969,15 @@ function movesHTML(d) {
   });
   return '<div class="moves">' + s + '</div>' + commentsHTML(d);
 }
+function lastLabel(d) {
+  const i = d.line.findIndex(st => st.from + '|' + st.key === d.lastKey);
+  const ply = d.startPly + Math.max(i, 0);
+  return Math.floor(ply / 2) + 1 + (ply % 2 ? '...' : '.') + d.lastSan;
+}
 function knownBtn(d, rep) {
   if (!d.lastKey || !d.msg || d.msg.kind !== 'ok') return '';
-  if (rep.known && rep.known[d.lastKey]) return '<p class="note" style="margin:0">' + esc(d.lastSan) + ' は今後出題しません。</p>';
-  return '<div class="row"><button class="btn small ghost" data-act="known">' + esc(d.lastSan) + ' はもう出さない</button></div>';
+  if (rep.known && rep.known[d.lastKey]) return '<p class="note" style="margin:0">' + esc(lastLabel(d)) + ' までの自分の手は、今後出題しません。</p>';
+  return '<div class="row"><button class="btn small ghost" data-act="known">' + esc(lastLabel(d)) + ' まで出さない</button></div>';
 }
 function drillView() {
   const d = S.drill, rep = curRep(d.repId);
@@ -1306,7 +1311,11 @@ document.addEventListener('click', async e => {
   }
   if (a === 'known') {
     const d = S.drill, rep = d && curRep(d.repId); if (!rep || !d.lastKey) return;
-    rep.known = rep.known || {}; rep.known[d.lastKey] = true; rep.updated = Date.now();
+    rep.known = rep.known || {};
+    // hide this move and every earlier move of mine on the path that led here; other branches keep their own moves
+    const upto = d.line.findIndex(st => st.from + '|' + st.key === d.lastKey);
+    for (let i = 0; i <= upto; i++) if (d.line[i].mine) rep.known[d.line[i].from + '|' + d.line[i].key] = true;
+    rep.known[d.lastKey] = true; rep.updated = Date.now();
     render();
     try { await putRep(S.player, rep); } catch (err) { S.notice = '保存できませんでした（' + (err.code || err.message) + '）'; render(); }
     return;
