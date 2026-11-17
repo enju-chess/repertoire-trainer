@@ -127,6 +127,11 @@ h2 { font-family: var(--font-display); font-weight: 800; font-size: 18px; margin
 .sq.d .coord { color: var(--sq-light); }
 .mini { max-width: 280px; margin: 0; }
 .anno { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+.promo { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: rgba(12, 18, 15, .42); border-radius: 4px; }
+.promo-box { background: var(--surface); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+.promo-row { display: flex; gap: 8px; }
+.promo-row button { width: clamp(48px, 15vw, 68px); aspect-ratio: 1; border: 1px solid var(--line); border-radius: 8px; background: var(--sq-light); padding: 4px; }
+.promo-row button svg { width: 100%; height: 100%; display: block; }
 /* drill */
 .drill-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .prompt { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
@@ -403,7 +408,10 @@ function boardHTML(pos, o) {
       : '<div class="' + cls.join(' ') + '">' + inner + '</div>');
   }
   const anno = o.anno ? annoSVG(o.anno, flip) : '';
-  return '<div class="board-wrap ps-' + S.look.pieces + ' bt-' + S.look.board + (o.mini ? ' mini' : '') + '"><div class="board">' + out.join('') + '</div>' + anno + '</div>';
+  const promo = o.promo ? '<div class="promo"><div class="promo-box"><span class="note">成る駒を選んでください</span><div class="promo-row">' +
+    ['q', 'r', 'b', 'n'].map(t => '<button data-act="promo" data-p="' + t + '" aria-label="' + ({ q: 'クイーン', r: 'ルーク', b: 'ビショップ', n: 'ナイト' })[t] + '"><svg class="pc ' + o.promo + '" viewBox="0 0 45 45">' + PIECE[t] + '</svg></button>').join('') +
+    '</div><button class="btn small ghost" data-act="promocancel">やめる</button></div></div>' : '';
+  return '<div class="board-wrap ps-' + S.look.pieces + ' bt-' + S.look.board + (o.mini ? ' mini' : '') + '"><div class="board">' + out.join('') + '</div>' + anno + promo + '</div>';
 }
 const ANNO_COL = { G: '#15803D', R: '#C2410C', Y: '#CA8A04', B: '#1D4ED8' };
 function annoSVG(a, flip) {
@@ -507,7 +515,7 @@ function loadPuzzle() {
   else { const n = nextInCycle(set, st); if (!n) return endRun(); id = n.id; st.pos = n.i; }
   const p = pzById[id];
   const pos = parseFen(p.fen), moves = p.m.split(' ');
-  Object.assign(r, { id, p, pos, moves, step: 0, solver: pos.turn === 'w' ? 'b' : 'w', state: 'intro', sel: null, dests: [], last: null, mark: null, failed: false, msg: null, t0: 0 });
+  Object.assign(r, { promo: null, id, p, pos, moves, step: 0, solver: pos.turn === 'w' ? 'b' : 'w', state: 'intro', sel: null, dests: [], last: null, mark: null, failed: false, msg: null, t0: 0 });
   render();
   setTimeout(() => { if (S.run !== r || r.id !== id) return; playAuto(); }, 700);
 }
@@ -570,7 +578,7 @@ function onSquare(sq) {
     const cand = legalMoves(r.pos).filter(m => m.from === r.sel && m.to === sq);
     if (cand.length) {
       let m = cand[0];
-      if (cand.length > 1) { const w = r.moves[r.step]; m = cand.find(x => toUci(x) === w) || cand.find(x => x.promo === 'q'); }
+      if (cand.length > 1) { r.promo = { cands: cand }; r.sel = null; r.dests = []; render(); return; }
       return tryMove(m);
     }
   }
@@ -641,7 +649,7 @@ function solveView() {
       (r.state === 'await' ? '<div class="row"><button class="btn small" data-act="hint">ヒント</button><button class="btn small" data-act="answer">答えを見る</button></div>' : '') + '</div>';
   }
   return '<section class="stack"><div class="drill-top"><span class="eyebrow">' + esc(set.name) + ' ・ ' + esc(head) + '</span><button class="btn small ghost" data-act="quit">やめる</button></div>' +
-    boardHTML(r.pos, { flip, last: r.last, sel: r.sel, dests: r.dests, mark: r.mark, interactive: true }) + panel + '</section>';
+    boardHTML(r.pos, { flip, last: r.last, sel: r.sel, dests: r.dests, mark: r.mark, promo: r.promo ? r.pos.turn : null, interactive: true }) + panel + '</section>';
 }
 function markEditor(id) {
   return '<div class="stack medit"><label class="note" for="medit-text">見直しメモ（本のページ、動画の時間など）</label>' +
@@ -739,6 +747,8 @@ document.addEventListener('click', async e => {
   if (a === 'run') return startRun(el.dataset.id, el.dataset.m);
   if (a === 'next') return nextPuzzle();
   if (a === 'quit') { S.run = null; S.tab = 'home'; render(); return; }
+  if (a === 'promo') { const x = S.run; if (!x || !x.promo) return; const m = x.promo.cands.find(c => c.promo === el.dataset.p); x.promo = null; if (m) tryMove(m); else render(); return; }
+  if (a === 'promocancel') { const x = S.run; if (x) { x.promo = null; render(); } return; }
   if (a === 'hint') return showAnswer(false);
   if (a === 'answer') return showAnswer(true);
   if (a === 'look') { S.look[el.dataset.k] = el.dataset.v; LS.set('rt.look', S.look); render(); return; }
