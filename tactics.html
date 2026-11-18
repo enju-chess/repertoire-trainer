@@ -538,7 +538,7 @@ function loadPuzzle() {
   const p = pzById[id];
   const pos = parseFen(p.fen), moves = p.m.split(' ');
   stopEngine();
-  Object.assign(r, { decs: [], decSel: 0, an: null, promo: null, id, p, pos, moves, step: 0, solver: pos.turn === 'w' ? 'b' : 'w', state: 'intro', sel: null, dests: [], last: null, mark: null, failed: false, msg: null, t0: 0 });
+  Object.assign(r, { ana: null, promo: null, id, p, pos, moves, step: 0, solver: pos.turn === 'w' ? 'b' : 'w', state: 'intro', sel: null, dests: [], last: null, mark: null, failed: false, msg: null, t0: 0 });
   render();
   setTimeout(() => { if (S.run !== r || r.id !== id) return; playAuto(); }, 700);
 }
@@ -552,7 +552,6 @@ function playAuto() {
 function tryMove(m) {
   const r = S.run, want = r.moves[r.step];
   r.sel = null; r.dests = [];
-  recordTry(r, m);
   const after = makeMove(r.pos, m);
   const isMateAlt = r.step === r.moves.length - 1 && inCheck(after) && legalMoves(after).length === 0;
   if (toUci(m) === want || isMateAlt) {
@@ -588,7 +587,6 @@ function finishCycle(set, st) {
 function showAnswer(full) {
   const r = S.run; if (r.state !== 'await') return;
   const m = uciMove(r.pos, r.moves[r.step]);
-  recordTry(r, null);
   r.failed = true;
   r.mark = full ? { from: m.from, to: m.to, kind: 'hint' } : { from: m.from, kind: 'hint' };
   r.msg = full ? { kind: 'info', text: '答えは ' + moveSan(r.pos, m) + '。盤上で指して進めてください。' } : { kind: 'info', text: '動かす駒を示しました。' };
@@ -597,7 +595,9 @@ function showAnswer(full) {
 function nextPuzzle() { const r = S.run; if (r.mode === 'wrong') r.qi++; r.cycleDone = null; loadPuzzle(); }
 function endRun() { const r = S.run; r.state = 'end'; render(); }
 function onSquare(sq) {
-  const r = S.run; if (!r || r.state !== 'await') return;
+  const r = S.run; if (!r) return;
+  if (r.state === 'done') return anaSquare(sq);
+  if (r.state !== 'await') return;
   const p = r.pos.b[sq];
   if (r.sel != null) {
     const cand = legalMoves(r.pos).filter(m => m.from === r.sel && m.to === sq);
@@ -612,7 +612,7 @@ function onSquare(sq) {
   render();
 }
 
-// ---- engine check (Stockfish, runs only when asked) ----
+// ---- analysis board after solving (free moves + Stockfish on request) ----
 // sf_engine.js wants chess.js to turn UCI into SAN; this app has its own move rules, so give it the same shape.
 class MiniChess {
   constructor(fen) { this.pos = parseFen(fen); }
@@ -625,9 +625,10 @@ class MiniChess {
 }
 const SF_DIR = 'sf/', SF_JS = SF_DIR + 'stockfish-18-lite-single.js', SF_WASM = SF_DIR + 'stockfish-18-lite-single.wasm';
 const ENG = { eng: null, status: 'idle', err: '', secs: +(LS.get('tt.engsecs') || 10) };
-function engineError(msg) { ENG.status = 'error'; ENG.err = msg; ENG.eng = null; render(); }
+function engineError(msg) { ENG.status = 'error'; ENG.err = msg; ENG.eng = null; const a = S.run && S.run.ana; if (a) a.engineOn = false; render(); }
 async function ensureEngine() {
   if (ENG.eng && ENG.status === 'ready') return ENG.eng;
+  if (ENG.status === 'loading') return null;
   ENG.status = 'loading'; ENG.err = ''; render();
   if (typeof window.SFEngine !== 'function') { engineError('エンジンの部品（sf_engine.js）を読み込めていません。ネットにつながった状態でアプリを開き直してください。'); return null; }
   if (typeof WebAssembly !== 'object') { engineError('この端末のブラウザは WebAssembly に対応していないため、エンジンを動かせません。'); return null; }
@@ -643,7 +644,7 @@ async function ensureEngine() {
     blobUrl = URL.createObjectURL(new Blob([buf], { type: 'application/wasm' }));
   } catch (e) {
     engineError('エンジンのファイル（stockfish-18-lite-single.wasm）を読み込めませんでした（' + (e.message || e) + '）。' +
-      (navigator.onLine === false ? 'いまはネットにつながっていません。一度ネットにつながった状態で「エンジンで確かめる」を押すと、それ以降はオフラインでも使えます。' : ''));
+      (navigator.onLine === false ? 'いまはネットにつながっていません。一度ネットにつながった状態でエンジンをつけると、それ以降はオフラインでも使えます。' : ''));
     return null;
   }
   try {
@@ -655,136 +656,112 @@ async function ensureEngine() {
     return null;
   }
 }
-// the positions where the solver had to choose a move, with the first move they tried there
-function recordTry(r, m) {
-  if (r.decs.some(d => d.step === r.step)) return;
-  r.decs.push({ last: r.last, step: r.step, fen: toFen(r.pos), want: r.moves[r.step], uci: m ? toUci(m) : null, san: m ? moveSan(r.pos, m) : null });
-}
 function stopEngine() { if (ENG.eng) ENG.eng.stop(); }
-const sideScore = (l, fen) => SFEngine.score(l) * (fen.split(' ')[1] === 'w' ? 1 : -1);   // from the mover's side
-async function runEngine() {
-  const r = S.run; if (!r || r.state !== 'done' || !r.decs.length) return;
-  const dec = r.decs[r.decSel || 0];
-  const eng = await ensureEngine(); if (!eng || S.run !== r) return;
-  const an = r.an = { fen: dec.fen, dec, lines: [], depth: 0, searching: true, mine: null, mineBusy: false, view: null, secs: ENG.secs };
-  const token = {}; an.token = token;
-  eng.onUpdate = res => {
-    if (S.run !== r || r.an !== an || res.fen !== an.fen || an.phase === 'mine') return;
-    an.lines = res.lines.map(l => {
-      const prev = an.lines.find(x => x.pv[0] === l.pv[0]);
-      return prev && l.pv.length < 4 && prev.pv.length > l.pv.length ? Object.assign({}, l, { pv: prev.pv, san: prev.san, line: prev.line }) : l;
-    });
-    an.depth = res.depth; an.searching = res.searching;
-    if (!res.searching) finishMain(r, an);
-    render();
-  };
-  an.phase = 'main';
-  eng.analyze(dec.fen, { multipv: 3, movetime: ENG.secs * 1000 });
-  render();
+
+// The analysis line starts before the opponent's first move and holds the whole puzzle solution,
+// so the solver can step back to the puzzle position and branch off anywhere.
+function anaOf(r) {
+  if (!r.ana) r.ana = { root: r.p.fen, moves: r.moves.slice(), idx: r.moves.length, sel: null, dests: [], lines: [], depth: 0, searching: false, engineOn: false, fen: '' };
+  return r.ana;
 }
-async function finishMain(r, an) {
-  if (an.finished) return; an.finished = true;
-  const dec = an.dec;
-  if (!dec.uci) { an.searching = false; render(); return; }
-  const hit = an.lines.find(l => l.pv[0] === dec.uci);
-  if (hit) { an.mine = hit; render(); return; }
-  an.phase = 'mine'; an.mineBusy = true; render();
-  const res = await ENG.eng.evaluate(dec.fen, { multipv: 1, searchmoves: [dec.uci], movetime: Math.min(4000, an.secs * 1000) });
-  if (S.run !== r || r.an !== an) return;
-  an.mineBusy = false; an.mine = res && res.lines[0] ? res.lines[0] : null; render();
-}
-function anPos(an) {
-  if (!an.view) return parseFen(an.fen);
-  const l = an.lines.find(x => x.k === an.view.k) || an.lines[0];
-  let pos = parseFen(an.fen);
-  for (let i = 0; i < an.view.i && l && i < l.pv.length; i++) { const m = uciMove(pos, l.pv[i]); if (!m) break; pos = makeMove(pos, m); }
+function anaPos(a, upto) {
+  let pos = parseFen(a.root);
+  const n = upto == null ? a.idx : upto;
+  for (let i = 0; i < n; i++) { const m = uciMove(pos, a.moves[i]); if (!m) break; pos = makeMove(pos, m); }
   return pos;
 }
-function anLast(an) {
-  if (!an.view || !an.view.i) return null;
-  const l = an.lines.find(x => x.k === an.view.k) || an.lines[0];
-  let pos = parseFen(an.fen), last = null;
-  for (let i = 0; i < an.view.i && i < l.pv.length; i++) { const m = uciMove(pos, l.pv[i]); if (!m) break; last = { from: m.from, to: m.to }; pos = makeMove(pos, m); }
-  return last;
+function anaLast(a) {
+  if (!a.idx) return null;
+  const m = uciMove(anaPos(a, a.idx - 1), a.moves[a.idx - 1]);
+  return m ? { from: m.from, to: m.to } : null;
 }
-function anArrows(an) {
-  if (an.view) return null;
-  const cal = [];
-  const best = an.lines[0];
-  if (an.dec.uci && (!best || best.pv[0] !== an.dec.uci)) cal.push({ c: 'R', f: an.dec.uci.slice(0, 2), t: an.dec.uci.slice(2, 4) });
-  if (best) cal.push({ c: 'G', f: best.pv[0].slice(0, 2), t: best.pv[0].slice(2, 4) });
-  return cal.length ? { cal, csl: [] } : null;
+function anaSans(a) {
+  const out = []; let pos = parseFen(a.root);
+  for (const u of a.moves) { const m = uciMove(pos, u); if (!m) break; out.push(moveSan(pos, m)); pos = makeMove(pos, m); }
+  return out;
 }
-const pawns = cp => (cp / 100).toFixed(2);
-function lossText(an) {
-  const best = an.lines[0], mine = an.mine;
-  if (!best || !mine) return '';
-  if (mine.pv[0] === best.pv[0]) return '最善手と同じ手です。';
-  const b = sideScore(best, an.fen), m = sideScore(mine, an.fen);
-  if (best.mate != null && mine.mate == null) return '最善手はメイトがある手でした。あなたの手ではメイトを逃しています。';
-  if (Math.abs(b) >= 90000 && Math.abs(m) >= 90000) return 'どちらもメイトになる手です（手数の違いだけ）。';
-  const d = (b - m) / 100;
-  return d < 0.05 ? '最善手とほぼ同じ評価です。' : '最善手より ' + d.toFixed(2) + ' ポーン分悪い手です。';
+function anaChanged(a) {
+  a.sel = null; a.dests = []; a.lines = []; a.depth = 0; a.searching = false;
+  if (a.engineOn) runAna(); else render();
 }
-function soundText(an) {
-  const best = an.lines[0]; if (!best || an.lines.length < 2) return '';
-  const b = sideScore(best, an.fen);
-  const ok = an.lines.filter(l => { const s = sideScore(l, an.fen); return Math.abs(b) >= 90000 ? s >= 90000 : (b - s <= 50 && s >= 150); });
-  const others = ok.filter(l => l.pv[0] !== an.dec.want).map(l => l.san[0] || l.pv[0]);
-  if (!others.length) return '候補手3つのうち、はっきり成立するのは問題の正解の手だけです。';
-  return '問題の正解以外にも成立しそうな手：' + others.join('、') + '（最善手との差が0.5ポーン以内）';
+function anaGo(a, i) { a.idx = Math.max(0, Math.min(a.moves.length, i)); anaChanged(a); }
+function anaMove(m) {
+  const r = S.run, a = anaOf(r), u = toUci(m);
+  if (a.moves[a.idx] === u) a.idx++;                        // same as the line already there: just step forward
+  else { a.moves = a.moves.slice(0, a.idx).concat([u]); a.idx++; }
+  anaChanged(a);
 }
-function pvHTML(an, l) {
-  const parts = sanLineParts(an.fen, l.san.length ? l.san : l.pv);
-  return parts.map((t, i) => '<button class="pvm' + (an.view && an.view.k === l.k && an.view.i === i + 1 ? ' on' : '') + '" data-act="pv" data-k="' + l.k + '" data-i="' + (i + 1) + '">' + esc(t) + '</button>').join(' ');
+function anaSquare(sq) {
+  const r = S.run, a = anaOf(r), pos = anaPos(a), p = pos.b[sq];
+  if (a.sel != null) {
+    const cand = legalMoves(pos).filter(m => m.from === a.sel && m.to === sq);
+    if (cand.length) {
+      if (cand.length > 1) { r.promo = { cands: cand, ana: true }; a.sel = null; a.dests = []; render(); return; }
+      return anaMove(cand[0]);
+    }
+  }
+  if (p && colorOf(p) === pos.turn && a.sel !== sq) { a.sel = sq; a.dests = legalMoves(pos).filter(m => m.from === sq).map(m => m.to); }
+  else { a.sel = null; a.dests = []; }
+  render();
 }
-function pvBar(an) {
-  if (!an.view) return '';
-  const l = an.lines.find(x => x.k === an.view.k) || an.lines[0];
-  const parts = sanLineParts(an.fen, l.san.length ? l.san : l.pv);
-  return '<div class="pvbar"><button class="btn small" data-act="pv-step" data-d="-1" aria-label="1手戻る">◀</button>' +
-    '<span class="mono">' + esc(parts[an.view.i - 1] || '') + '</span><span class="note">' + an.view.i + '/' + parts.length + '</span>' +
-    '<button class="btn small" data-act="pv-step" data-d="1" aria-label="1手進む">▶</button><button class="btn small ghost" data-act="pv-reset">元の局面</button></div>';
+async function runAna() {
+  const r = S.run; if (!r || !r.ana) return;
+  const a = r.ana, fen = toFen(anaPos(a));
+  a.fen = fen; a.lines = []; a.depth = 0; a.searching = true; render();
+  const eng = await ensureEngine();
+  if (!eng || S.run !== r || !a.engineOn || a.fen !== fen) return;
+  eng.onUpdate = res => {
+    if (S.run !== r || r.ana !== a || res.fen !== a.fen) return;
+    a.lines = res.lines.map(l => {      // the last report sometimes cuts a line short: keep the longer one
+      const prev = a.lines.find(x => x.pv[0] === l.pv[0]);
+      return prev && l.pv.length < 4 && prev.pv.length > l.pv.length ? Object.assign({}, l, { pv: prev.pv, san: prev.san }) : l;
+    });
+    a.depth = res.depth; a.searching = res.searching; render();
+  };
+  if (legalMoves(anaPos(a)).length === 0) { a.searching = false; render(); return; }
+  eng.analyze(fen, { multipv: 3, movetime: ENG.secs * 1000 });
 }
 function sanLineParts(fen, sans) {
   const p = fen.split(' '); let no = +(p[5] || 1), w = p[1] === 'w'; const out = [];
   sans.forEach((s, i) => { out.push(w ? no + '.' + s : (i === 0 ? no + '...' + s : s)); if (!w) no++; w = !w; });
   return out;
 }
-function engineHTML(r) {
-  if (!r.decs.length) return '';
-  const an = r.an;
+function anaArrows(a) {
+  if (!a.engineOn || !a.lines.length || a.fen !== toFen(anaPos(a))) return null;
+  const b = a.lines[0].pv[0];
+  return { cal: [{ c: 'G', f: b.slice(0, 2), t: b.slice(2, 4) }], csl: [] };
+}
+function anaBoard(r, flip) {
+  const a = anaOf(r), pos = anaPos(a);
+  return boardHTML(pos, { flip, last: anaLast(a), sel: a.sel, dests: a.dests, promo: r.promo ? pos.turn : null, anno: anaArrows(a), interactive: true }) +
+    '<div class="pvbar"><button class="btn small" data-act="ana-go" data-i="0" aria-label="最初へ">⏮</button><button class="btn small" data-act="ana-step" data-d="-1" aria-label="1手戻る">◀</button>' +
+    '<span class="note">' + a.idx + '/' + a.moves.length + '手</span>' +
+    '<button class="btn small" data-act="ana-step" data-d="1" aria-label="1手進む">▶</button><button class="btn small" data-act="ana-go" data-i="' + a.moves.length + '" aria-label="最後へ">⏭</button>' +
+    '<button class="btn small ghost" data-act="ana-reset">問題の手順に戻す</button></div>';
+}
+function anaHTML(r) {
+  const a = anaOf(r);
+  const sans = anaSans(a), parts = sanLineParts(a.root, sans);
+  const moveList = '<div class="moves">' + (parts.length ? parts.map((t, i) => '<button class="pvm' + (a.idx === i + 1 ? ' on' : '') + '" data-act="ana-go" data-i="' + (i + 1) + '">' + esc(t) + '</button>').join(' ') : '<span class="note">開始局面</span>') + '</div>';
   const times = [5, 10, 20].map(s => '<option value="' + s + '"' + (ENG.secs === s ? ' selected' : '') + '>' + s + '秒</option>').join('');
-  const decSel = r.decs.length > 1 ? '<div class="field"><label for="eng-dec">調べる局面</label><select id="eng-dec">' + r.decs.map((d, i) =>
-    '<option value="' + i + '"' + ((r.decSel || 0) === i ? ' selected' : '') + '>' + (i + 1) + '手目の局面（' + (d.san ? 'あなたの手 ' + esc(d.san) : '答えを見た') + '）</option>').join('') + '</select></div>' : '';
-  const busy = ENG.status === 'loading' || (an && (an.searching || an.mineBusy));
-  let head = '<div class="row eng-bar">' +
-    (busy ? '<button class="btn small" data-act="eng-stop">停止</button>' : '<button class="btn small primary" data-act="eng-run">' + (an ? 'もう一度調べる' : 'エンジンで確かめる') + '</button>') +
-    '<label class="note" for="eng-secs">時間</label><select id="eng-secs" style="width:auto">' + times + '</select>' +
-    (ENG.status === 'loading' ? '<span class="note">エンジンを準備しています…</span>' : '') +
-    (an && an.searching ? '<span class="note">調べています… 深さ ' + an.depth + '</span>' : '') +
-    (an && an.mineBusy ? '<span class="note">あなたの手を調べています…</span>' : '') + '</div>';
+  const curFen = toFen(anaPos(a));
+  const live = a.engineOn && a.fen === curFen;
+  let status = '';
+  if (ENG.status === 'loading') status = '<span class="note">エンジンを準備しています…</span>';
+  else if (live && a.searching) status = '<span class="note">調べています… 深さ ' + a.depth + '</span>';
+  else if (live && a.lines.length) status = '<span class="note">深さ ' + a.depth + '</span>';
+  const bar = '<div class="row eng-bar">' +
+    (a.engineOn ? '<button class="btn small" data-act="ana-engine">エンジンを止める</button>' : '<button class="btn small primary" data-act="ana-engine">エンジンをつける</button>') +
+    '<label class="note" for="eng-secs">1局面</label><select id="eng-secs" style="width:auto">' + times + '</select>' + status + '</div>';
   let body = '';
   if (ENG.status === 'error') body = '<p class="err" style="margin:0">' + esc(ENG.err) + '</p>';
-  if (an && an.lines.length) {
-    const d = an.dec, pos0 = parseFen(an.fen);
-    const mineLine = d.uci ? '<div class="eng-mine"><span class="eyebrow">あなたの最初の手</span><div><b class="mono">' + esc(d.san) + '</b> ' +
-      (an.mine ? '<span class="ev">' + esc(an.mine.text) + '</span>' : (an.mineBusy ? '<span class="note">調べています…</span>' : '<span class="note">—</span>')) +
-      '</div>' + (an.mine ? '<div class="note">' + esc(lossText(an)) + '</div>' : '') + '</div>'
-      : '<div class="eng-mine"><span class="note">この局面では手を指さずに答えを見ました。</span></div>';
-    body = '<p class="note" style="margin:0">評価値は白から見た値です（＋なら白が良い）。緑の矢印が最善手' + (d.uci && an.lines[0].pv[0] !== d.uci ? '、赤があなたの手' : '') + 'です。</p>' + mineLine +
-      '<ol class="eng-lines">' + an.lines.map(l => {
-        const tags = [];
-        if (l.pv[0] === d.want) tags.push('<span class="chip r-main">問題の正解</span>');
-        if (d.uci && l.pv[0] === d.uci) tags.push('<span class="chip r-alt">あなたの手</span>');
-        return '<li><div class="eng-head"><span class="ev">' + esc(l.text) + '</span><b class="mono">' + esc(l.san[0] || l.pv[0]) + '</b>' + tags.join('') + '<span class="note">深さ' + l.depth + '</span></div><div class="pv">' + pvHTML(an, l) + '</div></li>';
-      }).join('') + '</ol>' +
-      (!an.searching ? '<p class="note" style="margin:0">' + esc(soundText(an)) + '</p>' : '') +
-      (an.view ? '<div class="row"><button class="btn small" data-act="pv-step" data-d="-1">◀</button><button class="btn small" data-act="pv-step" data-d="1">▶</button><button class="btn small ghost" data-act="pv-reset">元の局面に戻る</button></div>'
-        : '<p class="note" style="margin:0">読み筋の手をタップすると、その手順を盤上で並べられます。</p>');
-    void pos0;
-  }
-  return '<section class="eng"><h2>エンジンで確かめる</h2>' + decSel + head + body + '</section>';
+  else if (live && a.lines.length) {
+    body = '<ol class="eng-lines">' + a.lines.map(l => '<li><div class="eng-head"><span class="ev">' + esc(l.text) + '</span><b class="mono">' + esc(l.san[0] || l.pv[0]) + '</b></div>' +
+      '<div class="pv">' + sanLineParts(curFen, l.san.length ? l.san : l.pv).map((t, i) => '<button class="pvm" data-act="ana-pv" data-k="' + l.k + '" data-i="' + (i + 1) + '">' + esc(t) + '</button>').join(' ') + '</div></li>').join('') + '</ol>' +
+      '<p class="note" style="margin:0">評価値は白から見た値です（＋なら白が良い）。緑の矢印が最善手です。読み筋の手をタップすると、そこまで盤上で進めます。</p>';
+  } else if (live && !a.searching && legalMoves(anaPos(a)).length === 0) body = '<p class="note" style="margin:0">この局面は対局終了です。</p>';
+  else if (!a.engineOn) body = '<p class="note" style="margin:0">盤上で自由に駒を動かせます。エンジンをつけると、動かした局面を ' + ENG.secs + '秒ずつ調べます。</p>';
+  return '<section class="eng"><h2>解析</h2>' + moveList + bar + body + '</section>';
 }
 
 // ---- views ----
@@ -842,15 +819,15 @@ function solveView() {
       (r.cycleDone ? '<div class="msg ok">' + r.cycleDone.cycle + '周目が終わりました。正解率 ' + pct(r.cycleDone.ok, r.cycleDone.total) + '、平均 ' + fmtSec(r.cycleDone.avg) + '。次の周は新しい順番で始まります。</div>' : '') +
       '<div class="row"><button class="btn primary" data-act="next">次の問題</button><button class="btn small ' + (mk ? 'marked' : 'ghost') + '" data-act="mark">' + (mk ? '★ 見直しに登録済み' : '☆ 後で見直す') + '</button>' +
       '<a class="btn small ghost" href="https://lichess.org/training/' + esc(p.id) + '" target="_blank" rel="noopener">Lichessで見る</a></div>' +
-      (S.medit && S.medit.id === r.id ? markEditor(r.id) : '') + '</div>' + engineHTML(r);
+      (S.medit && S.medit.id === r.id ? markEditor(r.id) : '') + '</div>' + anaHTML(r);
   } else {
     panel = '<div class="prompt"><span class="q">' + (r.solver === 'w' ? '白' : '黒') + 'の番です。最善手を指してください</span>' +
       (r.msg ? '<div class="msg ' + r.msg.kind + '">' + esc(r.msg.text) + '</div>' : '') +
       (r.state === 'await' ? '<div class="row"><button class="btn small" data-act="hint">ヒント</button><button class="btn small" data-act="answer">答えを見る</button></div>' : '') + '</div>';
   }
   return '<section class="stack"><div class="drill-top"><span class="eyebrow">' + esc(set.name) + ' ・ ' + esc(head) + '</span><button class="btn small ghost" data-act="quit">やめる</button></div>' +
-    (r.state === 'done' && r.an
-      ? boardHTML(anPos(r.an), { flip, last: r.an.view ? anLast(r.an) : r.an.dec.last, anno: anArrows(r.an) }) + pvBar(r.an)
+    (r.state === 'done'
+      ? anaBoard(r, flip)
       : boardHTML(r.pos, { flip, last: r.last, sel: r.sel, dests: r.dests, mark: r.mark, promo: r.promo ? r.pos.turn : null, interactive: true })) + panel + '</section>';
 }
 function markEditor(id) {
@@ -948,22 +925,25 @@ document.addEventListener('click', async e => {
   if (a === 'tab') { stopEngine(); S.tab = el.dataset.t; S.run = null; S.notice = ''; S.confirm = null; render(); window.scrollTo(0, 0); return; }
   if (a === 'run') return startRun(el.dataset.id, el.dataset.m);
   if (a === 'next') return nextPuzzle();
-  if (a === 'eng-run') return runEngine();
-  if (a === 'eng-stop') { stopEngine(); return; }
-  if (a === 'pv') {
-    const an = S.run && S.run.an; if (!an) return; an.view = { k: +el.dataset.k, i: +el.dataset.i }; render();
+  if (a === 'ana-engine') {
+    const r = S.run; if (!r || !r.ana) return; const an = r.ana;
+    an.engineOn = !an.engineOn;
+    if (an.engineOn) { if (ENG.status === 'error') ENG.status = 'idle'; runAna(); } else { stopEngine(); an.searching = false; render(); }
+    return;
+  }
+  if (a === 'ana-go') { const r = S.run; if (r && r.ana) anaGo(r.ana, +el.dataset.i); return; }
+  if (a === 'ana-step') { const r = S.run; if (r && r.ana) anaGo(r.ana, r.ana.idx + +el.dataset.d); return; }
+  if (a === 'ana-reset') { const r = S.run; if (!r || !r.ana) return; r.ana.moves = r.moves.slice(); anaGo(r.ana, r.moves.length); return; }
+  if (a === 'ana-pv') {
+    const r = S.run, an = r && r.ana; if (!an) return;
+    const l = an.lines.find(x => x.k === +el.dataset.k); if (!l) return;
+    an.moves = an.moves.slice(0, an.idx).concat(l.pv.slice(0, +el.dataset.i)); an.idx += +el.dataset.i;
+    anaChanged(an);
     const bw = document.querySelector('.board-wrap'); if (bw && bw.getBoundingClientRect().top < 0) bw.scrollIntoView({ block: 'start', behavior: 'smooth' });
     return;
   }
-  if (a === 'pv-step') {
-    const an = S.run && S.run.an; if (!an || !an.view) return;
-    const l = an.lines.find(x => x.k === an.view.k) || an.lines[0];
-    const i = Math.max(0, Math.min(l.pv.length, an.view.i + +el.dataset.d));
-    an.view = i ? { k: an.view.k, i } : null; render(); return;
-  }
-  if (a === 'pv-reset') { const an = S.run && S.run.an; if (an) { an.view = null; render(); } return; }
   if (a === 'quit') { stopEngine(); S.run = null; S.tab = 'home'; render(); return; }
-  if (a === 'promo') { const x = S.run; if (!x || !x.promo) return; const m = x.promo.cands.find(c => c.promo === el.dataset.p); x.promo = null; if (m) tryMove(m); else render(); return; }
+  if (a === 'promo') { const x = S.run; if (!x || !x.promo) return; const m = x.promo.cands.find(c => c.promo === el.dataset.p); const isAna = x.promo.ana; x.promo = null; if (m) (isAna ? anaMove(m) : tryMove(m)); else render(); return; }
   if (a === 'promocancel') { const x = S.run; if (x) { x.promo = null; render(); } return; }
   if (a === 'hint') return showAnswer(false);
   if (a === 'answer') return showAnswer(true);
@@ -997,8 +977,7 @@ document.addEventListener('input', e => {
   if (e.target.id === 'sync-text') S.sync.paste = e.target.value;
 });
 document.addEventListener('change', e => {
-  if (e.target.id === 'eng-secs') { ENG.secs = +e.target.value; LS.set('tt.engsecs', ENG.secs); return; }
-  if (e.target.id === 'eng-dec') { const r = S.run; if (!r) return; stopEngine(); r.decSel = +e.target.value; r.an = null; render(); return; }
+  if (e.target.id === 'eng-secs') { ENG.secs = +e.target.value; LS.set('tt.engsecs', ENG.secs); const r = S.run; if (r && r.ana && r.ana.engineOn) anaChanged(r.ana); else render(); return; }
   if (e.target.classList && e.target.classList.contains('catsel')) {
     if (e.target.value) S.cat[e.target.dataset.id] = e.target.value; else delete S.cat[e.target.dataset.id];
     LS.set('tt.cat', S.cat); render(); return;
