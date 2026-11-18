@@ -10,3 +10,4 @@ iPhoneではSafariで開いて「共有 → ホーム画面に追加」。
 - 駒「メリダ」：Armando Hernandez Marroquin（GPLv2以降）。Lichess（lichess-org/lila）の public/piece/merida より
 - 駒「スタンダード」：Colin M.L. Burnett（GPLv2以降）。Lichess（lichess-org/lila）の public/piece/cburnett より
 - タクティクス問題：Lichess パズルデータベース（CC0）
+- エンジン：Stockfish.js 18 lite single（GPLv3、https://github.com/nmrugg/stockfish.js 、元は Stockfish https://github.com/official-stockfish/Stockfish ）。sf/ フォルダ。sf_engine.js はこれをブラウザで使うための自作の部品
