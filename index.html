@@ -197,6 +197,10 @@ textarea { font-family: var(--font-mono); font-size: 12.5px; min-height: 140px; 
 .gamelist { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .game { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
 .game-name { min-width: 0; display: flex; flex-direction: column; font-size: 13px; }
+.game.skipped .game-name { opacity: .5; }
+.game-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.check.small { font-size: 13px; font-weight: 500; }
+.check.small input { width: 18px; height: 18px; }
 .game-first { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .filebtn { position: relative; overflow: hidden; }
 .filebtn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
@@ -505,8 +509,9 @@ function buildGraph(pgn) {
     if (!roots.includes(rk)) roots.push(rk);
     const seq = parseMovetext(g.body);
     curGame = gameInfo.length;
-    const ev = (g.headers.Event || '').trim();
-    gameInfo.push({ name: ev && ev !== '?' ? ev : '', first: fmtPath(seq.slice(0, 6).map(x => x.san), pos.startPly), intro: seq.pre || '' });
+    const hv = k => { const v = (g.headers[k] || '').trim(); return v && v !== '?' ? v : ''; };
+    const ev = hv('Event'), evTail = ev.includes(':') ? ev.slice(ev.indexOf(':') + 1).trim() : ev;
+    gameInfo.push({ name: hv('White') || evTail || ev, oldName: ev, first: fmtPath(seq.slice(0, 6).map(x => x.san), pos.startPly), intro: seq.pre || '' });
     walk(seq, pos, [], 0);
   }
   return { nodes, roots, errors, games: games.length, gameInfo };
@@ -660,13 +665,23 @@ function data(rep) {
   const c = S.cache[rep.id];
   if (c && c.ver === (rep.updated || 0)) return c;
   const graph = buildGraph(rep.pgn);
-  graph.gameInfo.forEach(x => { x.id = x.name + '|' + x.first; });
+  graph.gameInfo.forEach(x => {
+    x.id = x.name + '|' + x.first;
+    const old = x.oldName + '|' + x.first;           // earlier versions named games by the Event tag
+    if (old !== x.id) {
+      if (rep.startMoves && rep.startMoves[old] && !rep.startMoves[x.id]) { rep.startMoves[x.id] = rep.startMoves[old]; delete rep.startMoves[old]; }
+      if (S.gameSel[rep.id] === old) { S.gameSel[rep.id] = x.id; LS.set('rt.gamesel', S.gameSel); }
+    }
+    x.skip = !!(rep.skip && rep.skip[x.id]);
+  });
   // older versions stored per-game settings by position in the file; move them to the game's own id
   if (rep.startMoves) for (const k of Object.keys(rep.startMoves)) {
     if (/^\d+$/.test(k) && graph.gameInfo[+k]) { const id = graph.gameInfo[+k].id; if (!rep.startMoves[id]) rep.startMoves[id] = rep.startMoves[k]; delete rep.startMoves[k]; }
   }
-  const lines = buildLines(rep, graph);
-  const lineGames = lines.map(l => { const st = l[l.length - 1]; return graph.nodes[st.from].moves[st.key].games || [0]; });
+  let lines = buildLines(rep, graph);
+  let lineGames = lines.map(l => { const st = l[l.length - 1]; return graph.nodes[st.from].moves[st.key].games || [0]; });
+  const keep = lineGames.map(gs => gs.some(gi => !(graph.gameInfo[gi] && graph.gameInfo[gi].skip)));
+  lines = lines.filter((_, i) => keep[i]); lineGames = lineGames.filter((_, i) => keep[i]);
   const probs = quizKeys(rep, graph, lines);
   const out = { ver: rep.updated || 0, graph, lines, lineGames, probs, byGame: {} };
   S.cache[rep.id] = out;
@@ -681,11 +696,12 @@ function probsFor(rep, gi) {
 function gameLabel(x) { return x.name ? x.name : x.first; }
 function selGame(rep) {
   const id = S.gameSel[rep.id]; if (!id) return null;
-  const i = data(rep).graph.gameInfo.findIndex(x => x.id === id);
+  const i = data(rep).graph.gameInfo.findIndex(x => x.id === id && !x.skip);
   return i >= 0 ? i : null;
 }
 function startMoveOf(rep, gi, graph) {
   const sm = rep.startMoves || {}, x = graph && graph.gameInfo[gi];
+  if (x && x.skip) return Infinity;                  // a game set to 練習しない never asks its moves
   return (x && sm[x.id]) || rep.startMove || 1;
 }
 function isQuizStep(rep, st, ply, graph) {
@@ -1133,7 +1149,7 @@ function homeView() {
     const gi = selGame(rep), st = stats(rep, gi), gs = data(rep).graph.gameInfo;
     const pick = gs.length > 1 ? '<div class="field"><label for="gs-' + rep.id + '">練習範囲</label><select class="gamesel" id="gs-' + rep.id + '" data-id="' + rep.id + '">' +
       '<option value="">全ゲームから（復習 ' + stats(rep, null).due + '）</option>' +
-      gs.map((x, i) => '<option value="' + esc(x.id) + '"' + (gi === i ? ' selected' : '') + '>' + esc(gameLabel(x)) + '（復習 ' + stats(rep, i).due + '）</option>').join('') + '</select></div>' : '';
+      gs.map((x, i) => x.skip ? '' : '<option value="' + esc(x.id) + '"' + (gi === i ? ' selected' : '') + '>' + esc(gameLabel(x)) + '（復習 ' + stats(rep, i).due + '）</option>').join('') + '</select></div>' : '';
     return '<article class="rep"><div class="rep-head"><span class="rep-name">' + esc(rep.name) + '</span><span class="side ' + rep.side + '">' + (rep.side === 'w' ? '白番' : '黒番') + '</span></div>' + pick +
       '<div class="counts"><div class="count due"><b>' + st.due + '</b><span>今日の復習</span></div><div class="count"><b>' + st.learned + '</b><span>覚えた手</span></div><div class="count"><b>' + st.total + '</b><span>問題数</span></div></div>' +
       '<div class="row"><button class="btn primary" data-act="drill" data-id="' + rep.id + '" data-m="review"' + (st.due ? '' : ' disabled') + '>復習する</button>' +
@@ -1240,9 +1256,11 @@ function startMoveUI(rep, g) {
   const openAttr = S.openGames === rep.id ? ' open' : '';
   const gs = g.gameInfo || [];
   if (gs.length <= 1) return '<div class="row"><label class="note" for="sm-' + rep.id + '-0">出題開始</label>' + moveSelect(rep, 0) + '</div>';
-  const custom = gs.filter((_, i) => startMoveOf(rep, i, g) > 1).length;
-  return '<details class="games"' + openAttr + ' data-id="' + rep.id + '"><summary>ゲームごとの出題開始（' + gs.length + 'ゲーム' + (custom ? '・' + custom + '件設定済み' : '') + '）</summary><div class="gamelist">' +
-    gs.map((x, i) => '<div class="game"><div class="game-name">' + (x.name ? '<b>' + esc(x.name) + '</b>' : '') + '<span class="game-first">' + esc(x.first) + '</span></div>' + moveSelect(rep, i) + '</div>').join('') +
+  const custom = gs.filter((x, i) => !x.skip && startMoveOf(rep, i, g) > 1).length, off = gs.filter(x => x.skip).length;
+  return '<details class="games"' + openAttr + ' data-id="' + rep.id + '"><summary>ゲームごとの設定（' + gs.length + 'ゲーム' + (off ? '・練習しない ' + off : '') + (custom ? '・出題開始 ' + custom + '件' : '') + '）</summary>' +
+    '<p class="note" style="margin:6px 0 0">準備ができていないゲームは「練習する」を外すと、PGNに入れたまま出題から外せます。</p><div class="gamelist">' +
+    gs.map((x, i) => '<div class="game' + (x.skip ? ' skipped' : '') + '"><div class="game-name">' + (x.name ? '<b>' + esc(x.name) + '</b>' : '') + '<span class="game-first">' + esc(x.first) + '</span></div>' +
+      '<div class="game-ctl"><label class="check small"><input type="checkbox" class="gameskip" data-id="' + rep.id + '" data-g="' + i + '"' + (x.skip ? '' : ' checked') + '> 練習する</label>' + (x.skip ? '' : moveSelect(rep, i)) + '</div></div>').join('') +
     '</div></details>';
 }
 function updForm(rep) {
@@ -1380,7 +1398,7 @@ async function importData(obj) {
     else {
       const [older, newer] = (r.updated || 0) > (cur.updated || 0) ? [cur, r] : [r, cur];
       next = clone(newer);
-      for (const f of ['roles', 'known', 'comments', 'marks', 'startMoves']) next[f] = Object.assign({}, older[f] || {}, newer[f] || {});
+      for (const f of ['roles', 'known', 'comments', 'marks', 'startMoves', 'skip']) next[f] = Object.assign({}, older[f] || {}, newer[f] || {});
       merged++;
     }
     next.updated = Date.now();
@@ -1571,6 +1589,16 @@ document.addEventListener('change', e => {
     const rep = curRep(e.target.dataset.id); if (!rep) return;
     const gx = data(rep).graph.gameInfo[+e.target.dataset.g];
     rep.startMoves = rep.startMoves || {}; rep.startMoves[gx ? gx.id : '0'] = +e.target.value;
+    S.openGames = rep.id; rep.updated = Date.now(); render();
+    putRep(S.player, rep).catch(err => { S.notice = '保存できませんでした（' + (err.code || err.message) + '）'; render(); });
+    return;
+  }
+  if (e.target.classList && e.target.classList.contains('gameskip')) {
+    const rep = curRep(e.target.dataset.id); if (!rep) return;
+    const gx = data(rep).graph.gameInfo[+e.target.dataset.g]; if (!gx) return;
+    rep.skip = rep.skip || {};
+    if (e.target.checked) delete rep.skip[gx.id]; else rep.skip[gx.id] = true;
+    if (!e.target.checked && S.gameSel[rep.id] === gx.id) { delete S.gameSel[rep.id]; LS.set('rt.gamesel', S.gameSel); }
     S.openGames = rep.id; rep.updated = Date.now(); render();
     putRep(S.player, rep).catch(err => { S.notice = '保存できませんでした（' + (err.code || err.message) + '）'; render(); });
     return;

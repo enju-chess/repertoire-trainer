@@ -1,5 +1,5 @@
 // Offline cache for レパートリー練習帳 and タクティクス練習帳. Bump VERSION when the file list changes.
-const VERSION = 'rt-v3';
+const VERSION = 'rt-v4';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png',
   'tactics.html', 'tactics.webmanifest', 'puzzles.json', 'ticon-180.png', 'ticon-192.png', 'ticon-512.png'];
 // Stockfish (about 7MB). Saved alongside the pages so the engine works offline; a failed download here
